@@ -43,4 +43,4 @@ Once you've set everything up, you can run the bot using:
 node index.js
 ```
 
-Enjoy interacting with your Telegram bot!
+Open your bot dialog window on telegram and type `/start` you will see "Hello,World"
