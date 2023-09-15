@@ -14,7 +14,10 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
+    "connectkit": "^1.5.3",
     "dotenv": "^16.3.1",
-    "telegraf": "^4.13.1"
+    "telegraf": "^4.13.1",
+    "viem": "^1.10.14",
+    "wagmi": "^1.4.1"
   }
 }
