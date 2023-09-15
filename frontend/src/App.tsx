@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { sendAddressToServer } from "./api/walletAddressAPI";
 import { WagmiConfig, createConfig } from "wagmi";
 import {
   ConnectKitProvider,
@@ -20,9 +21,17 @@ const config = createConfig(
 );
 // for information about user account
 const MyComponent = () => {
-  const { address, isConnecting, isDisconnected } = useAccount();
+  const { address, isConnecting } = useAccount();
+
+  // using useEffect to listen address change
+  useEffect(() => {
+    if (address) {
+      sendAddressToServer(address);
+    }
+  }, [address]);
+
   if (isConnecting) return <div>Connecting...</div>;
-  if (isDisconnected) return <div>Disconnected</div>;
+  if (!address) return <div>Disconnected</div>;
   return <div>Connected Wallet: {address}</div>;
 };
 
