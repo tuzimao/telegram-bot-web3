@@ -21,14 +21,20 @@ const PORT = 4000;
 app.use(express.json());
 
 // Endpoint to receive wallet address
-app.post('/wallet-address', (req, res) => {
-    const address = req.body.address;
+app.post('/wallet-address', async (req, res) => {
+    console.log('Received request with body:', req.body);
+    const walletAddress = req.body.walletAddress;
 
-    // Here you can send the address to your Telegram bot
-    bot.telegram.sendMessage(process.env.TELEGRAM_CHAT_ID as string, `Wallet Address: ${address}`);
-
-    res.status(200).send({ message: 'Address received!' });
+    try {
+        // Try sending the message to Telegram
+        await bot.telegram.sendMessage(BOT_TOKEN, `Wallet Address: ${walletAddress}`);
+        res.status(200).send({ message: 'Address received and sent to Telegram!' });
+    } catch (error) {
+        console.error('Error sending message to Telegram:', error);
+        res.status(500).send({ message: 'Failed to send message to Telegram.' });
+    }
 });
+
 
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
