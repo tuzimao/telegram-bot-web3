@@ -7,7 +7,7 @@ export const sendAddressToServer = async (walletAddress: string) => {
             },
             body: JSON.stringify({ walletAddress }),
         });
-
+        console.log('Response from server:', await response.json());
         const data = await response.json();
         console.log(data.message);
     } catch (error) {
