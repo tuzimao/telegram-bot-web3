@@ -19,6 +19,7 @@ bot.start((ctx) => {
     ctx.reply('Hello, World!');
     chatID = ctx.message.chat.id;  // 当用户发送/start时，存储chat.id
     ctx.reply(`Your chat ID is ${chatID}`);
+    ctx.replyWithHTML('<a href="http://localhost:3000">Click here to connect to your wallet : http://localhost:3000</a>');
 });
 bot.launch();
 
