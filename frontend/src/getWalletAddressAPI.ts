@@ -7,9 +7,13 @@ export const sendAddressToServer = async (walletAddress: string) => {
             },
             body: JSON.stringify({ walletAddress }),
         });
-        console.log('Response from server:', await response.json());
-        const data = await response.json();
-        console.log(data.message);
+
+        if (!response.ok) {
+            throw new Error('Server response was not ok.');
+        }
+
+        const data = await response.json(); // Ensure this is called only once
+        console.log('Response from server:', data);
     } catch (error) {
         console.error('There was an error sending the address:', error);
     }

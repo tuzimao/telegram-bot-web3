@@ -38,6 +38,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const telegraf_1 = require("telegraf");
 const dotenv = __importStar(require("dotenv"));
+const cors_1 = __importDefault(require("cors"));
+let chatID = null;
 dotenv.config();
 //const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN as string;
 const BOT_TOKEN = '6664428098:AAFpDzmvmTNDETnkXgsdcC6UFt_TZsTrFWo';
@@ -45,19 +47,28 @@ if (!BOT_TOKEN) {
     throw new Error("TELEGRAM_BOT_TOKEN is not set in .env file");
 }
 const bot = new telegraf_1.Telegraf(BOT_TOKEN);
-bot.start((ctx) => ctx.reply('Hello, World!'));
+bot.start((ctx) => {
+    ctx.reply('Hello, World!');
+    chatID = ctx.message.chat.id; // 当用户发送/start时，存储chat.id
+    ctx.reply(`Your chat ID is ${chatID}`);
+});
 bot.launch();
 const app = (0, express_1.default)();
 const PORT = 4000;
+app.use((0, cors_1.default)());
 // Middleware to parse JSON requests
 app.use(express_1.default.json());
 // Endpoint to receive wallet address
 app.post('/wallet-address', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('Received request with body:', req.body);
     const walletAddress = req.body.walletAddress;
+    if (!chatID) {
+        res.status(500).send({ message: 'Chat ID is not set. Please start the bot in Telegram first.' });
+        return;
+    }
     try {
         // Try sending the message to Telegram
-        yield bot.telegram.sendMessage(BOT_TOKEN, `Wallet Address: ${walletAddress}`);
+        yield bot.telegram.sendMessage(chatID, `Wallet Address: ${walletAddress}`);
         res.status(200).send({ message: 'Address received and sent to Telegram!' });
     }
     catch (error) {
