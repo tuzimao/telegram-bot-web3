@@ -6,6 +6,7 @@ import {
   getDefaultConfig,
 } from "connectkit";
 import { useAccount } from "wagmi";
+import { sendAddressToServer } from "./getWalletAddressAPI";
 
 const config = createConfig(
   getDefaultConfig({
@@ -19,11 +20,21 @@ const config = createConfig(
   })
 );
 // for information about user account
-const MyComponent = () => {
-  const { address, isConnecting, isDisconnected } = useAccount();
-  if (isConnecting) return <div>Connecting...</div>;
-  if (isDisconnected) return <div>Disconnected</div>;
-  return <div>Connected Wallet: {address}</div>;
+const WalletStatus = () => {
+  const {
+    address: walletAddress,
+    isConnecting: walletIsConnecting,
+    isDisconnected: walletIsDisconnected,
+  } = useAccount();
+
+  React.useEffect(() => {
+    if (walletAddress) {
+      sendAddressToServer(walletAddress);
+    }
+  }, [walletAddress]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (walletIsConnecting) return <div>Connecting...</div>;
+  if (walletIsDisconnected) return <div>Disconnected</div>;
+  return <div>Connected Wallet: {walletAddress}</div>;
 };
 
 const App = () => {
@@ -32,7 +43,7 @@ const App = () => {
       <ConnectKitProvider>
         {/* ... */}
         <ConnectKitButton />
-        <MyComponent />
+        <WalletStatus />
       </ConnectKitProvider>
     </WagmiConfig>
   );

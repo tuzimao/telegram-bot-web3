@@ -22,15 +22,33 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
 const telegraf_1 = require("telegraf");
 const dotenv = __importStar(require("dotenv"));
-dotenv.config({ path: '../.env' });
+dotenv.config();
+//const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN as string;
 const BOT_TOKEN = '6664428098:AAFpDzmvmTNDETnkXgsdcC6UFt_TZsTrFWo';
-console.log("Loaded BOT_TOKEN:", BOT_TOKEN);
 if (!BOT_TOKEN) {
     throw new Error("TELEGRAM_BOT_TOKEN is not set in .env file");
 }
 const bot = new telegraf_1.Telegraf(BOT_TOKEN);
 bot.start((ctx) => ctx.reply('Hello, World!'));
 bot.launch();
+const app = (0, express_1.default)();
+const PORT = 4000;
+// Middleware to parse JSON requests
+app.use(express_1.default.json());
+// Endpoint to receive wallet address
+app.post('/wallet-address', (req, res) => {
+    const address = req.body.address;
+    // Here you can send the address to your Telegram bot
+    bot.telegram.sendMessage(process.env.TELEGRAM_CHAT_ID, `Wallet Address: ${address}`);
+    res.status(200).send({ message: 'Address received!' });
+});
+app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+});

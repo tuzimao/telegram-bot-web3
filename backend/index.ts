@@ -4,7 +4,8 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN as string;
+//const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN as string;
+const BOT_TOKEN = '6664428098:AAFpDzmvmTNDETnkXgsdcC6UFt_TZsTrFWo';
 if (!BOT_TOKEN) {
     throw new Error("TELEGRAM_BOT_TOKEN is not set in .env file");
 }
