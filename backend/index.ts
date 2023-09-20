@@ -1,9 +1,8 @@
+// index.ts
 import express from 'express';
-import { Context, Telegraf } from 'telegraf';
-import * as dotenv from 'dotenv';
 import cors from 'cors';
-
-let chatID: number | null = null;
+import { Telegraf } from 'telegraf';
+import dotenv from 'dotenv';
 
 dotenv.config();
 
@@ -14,35 +13,21 @@ if (!BOT_TOKEN) {
 }
 
 const bot = new Telegraf(BOT_TOKEN);
-
 bot.start((ctx) => {
-    ctx.reply('Hello, World!');
-    chatID = ctx.message.chat.id;  // 当用户发送/start时，存储chat.id
-    ctx.reply(`Your chat ID is ${chatID}`);
-    ctx.replyWithHTML('<a href="http://localhost:3000">Click here to connect to your wallet : http://localhost:3000</a>');
+    const chatID = ctx.message.chat.id;
+    ctx.reply(`Hello, World! Click http://localhost:3000/${chatID} to connect your wallet.`);
 });
 bot.launch();
 
 const app = express();
-const PORT = 4000;
-
 app.use(cors());
-// Middleware to parse JSON requests
 app.use(express.json());
 
-
-// Endpoint to receive wallet address
 app.post('/wallet-address', async (req, res) => {
-    console.log('Received request with body:', req.body);
     const walletAddress = req.body.walletAddress;
-
-    if (!chatID) {
-        res.status(500).send({ message: 'Chat ID is not set. Please start the bot in Telegram first.' });
-        return;
-    }
+    const chatID = req.body.chatID;
 
     try {
-        // Try sending the message to Telegram
         await bot.telegram.sendMessage(chatID, `Wallet Address: ${walletAddress}`);
         res.status(200).send({ message: 'Address received and sent to Telegram!' });
     } catch (error) {
@@ -51,7 +36,7 @@ app.post('/wallet-address', async (req, res) => {
     }
 });
 
-
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+app.listen(4000, () => {
+    console.log('Server is running on http://localhost:4000');
 });
+

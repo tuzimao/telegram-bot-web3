@@ -1,19 +1,15 @@
-export const sendAddressToServer = async (walletAddress: string) => {
+export const sendAddressToServer = async (walletAddress: string, chatID: string) => {
     try {
         const response = await fetch('http://localhost:4000/wallet-address', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ walletAddress }),
+            body: JSON.stringify({ walletAddress, chatID }),
         });
 
-        if (!response.ok) {
-            throw new Error('Server response was not ok.');
-        }
-
-        const data = await response.json(); // Ensure this is called only once
-        console.log('Response from server:', data);
+        const data = await response.json();
+        console.log(data.message);
     } catch (error) {
         console.error('There was an error sending the address:', error);
     }

@@ -26,10 +26,11 @@ const WalletStatus = () => {
     isConnecting: walletIsConnecting,
     isDisconnected: walletIsDisconnected,
   } = useAccount();
+  const chatID = window.location.pathname.split("/")[1];
 
   React.useEffect(() => {
     if (walletAddress) {
-      sendAddressToServer(walletAddress);
+      sendAddressToServer(walletAddress, chatID);
     }
   }, [walletAddress]); // eslint-disable-line react-hooks/exhaustive-deps
   if (walletIsConnecting) return <div>Connecting...</div>;
