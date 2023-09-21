@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect } from "react";
+import Web3 from "web3";
 import { WagmiConfig, createConfig } from "wagmi";
 import {
   mainnet,
@@ -15,6 +16,7 @@ import {
 } from "connectkit";
 import { useAccount } from "wagmi";
 import { sendAddressToServer } from "./getWalletAddressAPI";
+import LotteryManagerABI from "./LotteryManagerABI.json";
 
 const chains = [mainnet, polygon, optimism, arbitrum, goerli, sepolia];
 
@@ -30,6 +32,38 @@ const config = createConfig(
     appIcon: "https://yourappurl.com/logo.png",
   })
 );
+
+// Initialize Web3
+const web3 = new Web3(
+  new Web3.providers.HttpProvider(
+    "https://sepolia.infura.io/v3/73d62d6d12454a5d8866f12d641e9dc5"
+  )
+);
+const abi = LotteryManagerABI;
+
+const contractAddress = "0x9D2340Ceacf45Fbd63045857596211685AEF7C49";
+const contract = new web3.eth.Contract(abi, contractAddress);
+
+const connectToBlockchain = async () => {
+  console.log("Attempting to connect to blockchain");
+  try {
+    const accounts = await (window as any).ethereum.request({
+      method: "eth_requestAccounts",
+    });
+    const account = accounts[0];
+    console.log(`Connected to account: ${account}`);
+
+    // Calling getOpenLotteries from the contract
+    console.log("Attempting to fetch open lotteries");
+    const openLotteries = await contract.methods
+      .getOpenLotteries()
+      .call({ from: account });
+    console.log("Successfully fetched open lotteries: ", openLotteries);
+  } catch (error) {
+    console.error("Error connecting to blockchain: ", error);
+  }
+};
+
 // for information about user account
 const WalletStatus = () => {
   const {
@@ -39,11 +73,19 @@ const WalletStatus = () => {
   } = useAccount();
   const chatID = window.location.pathname.split("/")[1];
 
-  React.useEffect(() => {
+  useEffect(() => {
+    if ((window as any).ethereum) {
+      (window as any).ethereum.request({ method: "eth_requestAccounts" });
+    }
+    connectToBlockchain();
+  }, []);
+
+  useEffect(() => {
     if (walletAddress) {
       sendAddressToServer(walletAddress, chatID);
     }
-  }, [walletAddress]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [walletAddress, chatID]);
+
   if (walletIsConnecting) return <div>Connecting...</div>;
   if (walletIsDisconnected) return <div>Disconnected</div>;
   return <div>Connected Wallet: {walletAddress}</div>;
