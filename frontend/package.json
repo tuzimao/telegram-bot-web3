@@ -16,7 +16,8 @@
     "react-scripts": "5.0.1",
     "viem": "^1.10.14",
     "wagmi": "^1.4.1",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "web3": "^4.1.2"
   },
   "scripts": {
     "start": "react-scripts start",
