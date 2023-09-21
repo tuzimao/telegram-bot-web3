@@ -41,7 +41,7 @@ const web3 = new Web3(
 );
 const abi = LotteryManagerABI;
 
-const contractAddress = "0x9D2340Ceacf45Fbd63045857596211685AEF7C49";
+const contractAddress = "0xce617a0Bc3a26A5F880AADEB70A6390CDb8fBfC4";
 const contract = new web3.eth.Contract(abi, contractAddress);
 
 const connectToBlockchain = async () => {
@@ -54,6 +54,10 @@ const connectToBlockchain = async () => {
     console.log(`Connected to account: ${account}`);
 
     // Calling getOpenLotteries from the contract
+    console.log("Attempting to fetch max tickets");
+    const maxTickets = await contract.methods.MAX_TICKETS().call();
+    console.log("Max Tickets: ", maxTickets);
+
     console.log("Attempting to fetch open lotteries");
     const openLotteries = await contract.methods
       .getOpenLotteries()
