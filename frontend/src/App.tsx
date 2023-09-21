@@ -1,6 +1,14 @@
 import React from "react";
 import { WagmiConfig, createConfig } from "wagmi";
 import {
+  mainnet,
+  polygon,
+  optimism,
+  arbitrum,
+  goerli,
+  sepolia,
+} from "wagmi/chains";
+import {
   ConnectKitProvider,
   ConnectKitButton,
   getDefaultConfig,
@@ -8,11 +16,14 @@ import {
 import { useAccount } from "wagmi";
 import { sendAddressToServer } from "./getWalletAddressAPI";
 
+const chains = [mainnet, polygon, optimism, arbitrum, goerli, sepolia];
+
 const config = createConfig(
   getDefaultConfig({
     infuraId: process.env.REACT_APP_INFURA_ID as string,
     walletConnectProjectId: process.env
       .REACT_APP_WALLETCONNECT_PROJECT_ID as string,
+    chains,
     appName: "Telegram-web3",
     appDescription: "Your App Description",
     appUrl: "https://yourappurl.com",
