@@ -37,7 +37,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 exports.__esModule = true;
 // index.ts
-var express_1 = require("express");
+var express = require("express");
 var cors = require("cors");
 var telegraf_1 = require("telegraf");
 var dotenv = require("dotenv");
@@ -48,14 +48,46 @@ if (!BOT_TOKEN) {
     throw new Error("TELEGRAM_BOT_TOKEN is not set in .env file");
 }
 var bot = new telegraf_1.Telegraf(BOT_TOKEN);
+bot.use(telegraf_1.Telegraf.log());
 bot.start(function (ctx) {
     var chatID = ctx.message.chat.id;
-    ctx.reply("Hello, World! Click http://localhost:3000/".concat(chatID, " to connect your wallet."));
+    var firstName = ctx.message.from.first_name;
+    ctx.reply("Hello,".concat(firstName, " Click http://localhost:3000/").concat(chatID, " to connect your wallet."));
+});
+bot.command("menu", function (ctx) {
+    return ctx.reply("Choose an option:", telegraf_1.Markup.inlineKeyboard([
+        [telegraf_1.Markup.button.callback("How To Play😎", "how_to_play")],
+        [telegraf_1.Markup.button.callback("View Open Lottery🔍", "open_lottery")],
+        [telegraf_1.Markup.button.callback("View My Lottery Ticket", "my_ticket")],
+        [telegraf_1.Markup.button.callback("View My Current Balance", "my_balance")],
+        [telegraf_1.Markup.button.callback("Transfer My NFT Into Pool", "transfer_nft")],
+    ]));
+});
+bot.action("how_to_play", function (ctx) {
+    // 这里你可以写代码来处理 "How To Play" 的逻辑
+    ctx.answerCbQuery("Fetching how to play..."); // 这只是一个示例回复
+    return ctx.reply("How To Play\n    1. Buy a ticket for 0.0001 ETH\n    2. Wait for the lottery to end\n    3. If your ticket is drawn, you win the NFT!");
+});
+bot.action("open_lottery", function (ctx) {
+    // 这里你可以写代码来处理 "View Open Lottery" 的逻辑
+    ctx.answerCbQuery("Fetching open lotteries..."); // 这只是一个示例回复
+});
+bot.action("my_ticket", function (ctx) {
+    // 这里你可以写代码来处理 "View My Lottery Ticket" 的逻辑
+    ctx.answerCbQuery("Fetching your lottery ticket..."); // 这只是一个示例回复
+});
+bot.action("my_balance", function (ctx) {
+    // 这里你可以写代码来处理 "View My Current Balance" 的逻辑
+    ctx.answerCbQuery("Fetching your balance..."); // 这只是一个示例回复
+});
+bot.action("transfer_nft", function (ctx) {
+    // 这里你可以写代码来处理 "Transfer My NFT Into Pool" 的逻辑
+    ctx.answerCbQuery("Transferring your NFT into the pool..."); // 这只是一个示例回复
 });
 bot.launch();
-var app = (0, express_1["default"])();
+var app = express();
 app.use(cors());
-app.use(express_1["default"].json());
+app.use(express.json());
 app.post("/wallet-address", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
     var walletAddress, chatID, error_1;
     return __generator(this, function (_a) {
@@ -65,18 +97,29 @@ app.post("/wallet-address", function (req, res) { return __awaiter(void 0, void 
                 chatID = req.body.chatID;
                 _a.label = 1;
             case 1:
-                _a.trys.push([1, 3, , 4]);
-                return [4 /*yield*/, bot.telegram.sendMessage(chatID, "Wallet Address: ".concat(walletAddress))];
+                _a.trys.push([1, 4, , 5]);
+                return [4 /*yield*/, bot.telegram.sendMessage(chatID, "Congrets! Your Wallet Are Securely Connected\n         Wallet Address: ".concat(walletAddress))];
             case 2:
                 _a.sent();
-                res.status(200).send({ message: "Address received and sent to Telegram!" });
-                return [3 /*break*/, 4];
+                // 紧接着发送带有三个按钮的消息
+                return [4 /*yield*/, bot.telegram.sendMessage(chatID, "Choose an option:", telegraf_1.Markup.inlineKeyboard([
+                        [telegraf_1.Markup.button.callback("How To Play 😎", "how_to_play")],
+                        [telegraf_1.Markup.button.callback("View Open Lottery 🔍", "open_lottery")],
+                        [telegraf_1.Markup.button.callback("View My Lottery Ticket", "my_ticket")],
+                        [telegraf_1.Markup.button.callback("View My Current Balance", "my_balance")],
+                        [telegraf_1.Markup.button.callback("Transfer My NFT Into Pool", "transfer_nft")],
+                    ]))];
             case 3:
+                // 紧接着发送带有三个按钮的消息
+                _a.sent();
+                res.status(200).send({ message: "Address received and sent to Telegram!" });
+                return [3 /*break*/, 5];
+            case 4:
                 error_1 = _a.sent();
                 console.error("Error sending message to Telegram:", error_1);
                 res.status(500).send({ message: "Failed to send message to Telegram." });
-                return [3 /*break*/, 4];
-            case 4: return [2 /*return*/];
+                return [3 /*break*/, 5];
+            case 5: return [2 /*return*/];
         }
     });
 }); });

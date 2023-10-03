@@ -1,0 +1,39 @@
+// LotteryManagerHelper.ts
+import { ethers } from "ethers";
+import LotteryManagerABI from "./LotteryManagerABI.json";
+
+export const buyTickets = async (
+  numberOfTickets: number,
+  lotteryId: number
+) => {
+  const provider = new ethers.providers.JsonRpcProvider(
+    "https://sepolia.infura.io/v3/73d62d6d12454a5d8866f12d641e9dc5"
+  ); // 使用你的 Infura URL
+  const signer = provider.getSigner();
+
+  const lotteryManagerAddress = "0xce617a0Bc3a26A5F880AADEB70A6390CDb8fBfC4";
+  const LotteryManager = new ethers.Contract(
+    lotteryManagerAddress,
+    LotteryManagerABI,
+    signer
+  );
+
+  const ticketPrice = ethers.parseEther("0.0001");
+  const ticketPriceBigInt = BigInt(ticketPrice.toString());
+  const numberOfTicketsBigInt = BigInt(numberOfTickets);
+  const totalCost = ticketPriceBigInt * numberOfTicketsBigInt;
+
+  console.log(
+    `Buying ${numberOfTickets} tickets for lottery ID: ${lotteryId}...`
+  );
+
+  const tx = await LotteryManager.buyTickets(lotteryId, numberOfTickets, {
+    value: totalCost,
+  });
+
+  const receipt = await tx.wait();
+
+  console.log(`Transaction hash: ${receipt.transactionHash}`);
+  console.log(`Bought ${numberOfTickets} tickets for lottery ID: ${lotteryId}`);
+  return receipt;
+};
