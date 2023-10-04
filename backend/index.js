@@ -105,6 +105,47 @@ bot.action("view_open_lottery", function (ctx) { return __awaiter(void 0, void 0
         }
     });
 }); });
+var userQueries = {};
+bot.action(/buy_ticket_(\d+)/, function (ctx) { return __awaiter(void 0, void 0, void 0, function () {
+    var lotteryId, chatId;
+    return __generator(this, function (_a) {
+        lotteryId = ctx.match[1];
+        chatId = ctx.update.callback_query.message.chat.id.toString();
+        // Store user query
+        userQueries[chatId] = {
+            type: "buyTicket",
+            lotteryId: lotteryId
+        };
+        ctx.reply("How many tickets would you like to buy for Lottery ".concat(lotteryId, "? (1 to 10)"), {
+            reply_markup: {
+                keyboard: [["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"], ["10"]],
+                one_time_keyboard: true,
+                resize_keyboard: true
+            }
+        });
+        return [2 /*return*/];
+    });
+}); });
+bot.on("text", function (ctx) { return __awaiter(void 0, void 0, void 0, function () {
+    var chatId, text, userQuery, numberOfTickets;
+    return __generator(this, function (_a) {
+        chatId = ctx.message.chat.id.toString();
+        text = ctx.message.text;
+        userQuery = userQueries[chatId];
+        if (userQuery && userQuery.type === "buyTicket") {
+            numberOfTickets = parseInt(text, 10);
+            if (numberOfTickets >= 1 && numberOfTickets <= 10) {
+                // TODO: Send lotteryId and numberOfTickets to the frontend
+                // ...
+                delete userQueries[chatId];
+            }
+            else {
+                ctx.reply("Please enter a valid number between 1 and 10.");
+            }
+        }
+        return [2 /*return*/];
+    });
+}); });
 bot.action("my_ticket", function (ctx) {
     // 这里你可以写代码来处理 "View My Lottery Ticket" 的逻辑
     ctx.answerCbQuery("Fetching your lottery ticket..."); // 这只是一个示例回复

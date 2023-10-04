@@ -28,6 +28,30 @@ function initializeWeb3Contract() {
   return { web3, contract };
 }
 
+async function displayOpenLotteries(ctx: any) {
+  try {
+    const response = await fetch("http://localhost:4000/view_open_lottery");
+    const data = await response.json();
+    const openLotteries = data.openLotteries;
+
+    const buttons = openLotteries.map((lotteryId: number) => {
+      return [
+        Markup.button.callback(
+          `Buy Tickets for Lottery ${lotteryId}`,
+          `buy_ticket_${lotteryId}`
+        ),
+      ];
+    });
+
+    ctx.reply(
+      `Open Lotteries: ${openLotteries}`,
+      Markup.inlineKeyboard(buttons)
+    );
+  } catch (error) {
+    ctx.reply("Error fetching open lotteries. Please try again later.");
+  }
+}
+
 const bot = new Telegraf(BOT_TOKEN);
 bot.use(Telegraf.log());
 bot.start((ctx) => {
@@ -60,27 +84,76 @@ bot.action("how_to_play", (ctx) => {
   );
 });
 bot.action("view_open_lottery", async (ctx) => {
-  try {
-    const response = await fetch("http://localhost:4000/view_open_lottery");
-    const data = await response.json();
-    const openLotteries = data.openLotteries;
+  // 这里你可以写代码来处理 "View Open Lottery" 的逻辑
+  ctx.answerCbQuery("Fetching open lotteries..."); // 这只是一个示例回复
+  await displayOpenLotteries(ctx);
+});
+const userQueries: { [key: string]: { type: string; lotteryId: string } } = {};
+bot.action(/buy_ticket_(\d+)/, async (ctx) => {
+  const lotteryId = ctx.match![1];
+  const chatId = ctx.update.callback_query!.message!.chat.id.toString();
 
-    const buttons = openLotteries.map((lotteryId: number) => {
-      return [
-        Markup.button.callback(
-          `Buy Tickets for Lottery ${lotteryId}`,
-          `buy_ticket_${lotteryId}`
-        ),
-      ];
-    });
+  // Store user query
+  userQueries[chatId] = {
+    type: "buyTicket",
+    lotteryId,
+  };
 
-    ctx.reply(
-      `Open Lotteries: ${openLotteries}`,
-      Markup.inlineKeyboard(buttons)
-    );
-  } catch (error) {
-    ctx.reply("Error fetching open lotteries. Please try again later.");
+  ctx.reply(
+    `How many tickets would you like to buy for Lottery ${lotteryId}? (1 to 10)`,
+    {
+      reply_markup: {
+        keyboard: [["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"], ["10"]],
+        one_time_keyboard: true,
+        resize_keyboard: true,
+      },
+    }
+  );
+});
+
+bot.on("text", async (ctx) => {
+  const chatId = ctx.message!.chat.id.toString();
+  const text = ctx.message!.text;
+  const userQuery = userQueries[chatId];
+
+  if (userQuery && userQuery.type === "buyTicket") {
+    const numberOfTickets = parseInt(text, 10);
+
+    if (numberOfTickets >= 1 && numberOfTickets <= 10) {
+      // 提供确认和取消按钮
+      ctx.reply(
+        `Do you want to buy ${numberOfTickets} tickets for Lottery ${userQuery.lotteryId}?`,
+        Markup.inlineKeyboard([
+          [
+            Markup.button.callback(
+              `Confirm Buy ${numberOfTickets} tickets`,
+              `confirm_buy_${numberOfTickets}_${userQuery.lotteryId}`
+            ),
+            Markup.button.callback("Cancel", "cancel_buy"),
+          ],
+        ])
+      );
+    } else {
+      ctx.reply("Please enter a valid number between 1 and 10.");
+    }
   }
+});
+
+bot.action(/confirm_buy_([0-9]+)_([0-9]+)/, async (ctx) => {
+  const numberOfTickets = ctx.match![1];
+  const lotteryId = ctx.match![2];
+
+  // TODO: Send lotteryId and numberOfTickets to the frontend
+
+  ctx.reply(
+    `Confirmed purchase of ${numberOfTickets} tickets for Lottery ${lotteryId}. Processing...`
+  );
+});
+
+bot.action("cancel_buy", async (ctx) => {
+  // Return to the view_open_lottery level
+  await ctx.reply("Purchase cancelled.");
+  await displayOpenLotteries(ctx);
 });
 
 bot.action("my_ticket", (ctx) => {
