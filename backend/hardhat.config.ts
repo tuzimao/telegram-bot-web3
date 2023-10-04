@@ -15,8 +15,8 @@ const config: HardhatUserConfig = {
   solidity: "0.8.19",
   networks: {
     sepolia: {
-      url: `https://sepolia.etherscan.io/address/${REACT_APP_INFURA_ID}`,
-      accounts: [`0x${PRIVATE_KEY}`],
+      url: ``,
+      accounts: [``],
     },
   },
 };

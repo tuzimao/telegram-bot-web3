@@ -49,6 +49,13 @@ var BOT_TOKEN = "6664428098:AAFpDzmvmTNDETnkXgsdcC6UFt_TZsTrFWo";
 if (!BOT_TOKEN) {
     throw new Error("TELEGRAM_BOT_TOKEN is not set in .env file");
 }
+function initializeWeb3Contract() {
+    var web3 = new Web3(new Web3.providers.HttpProvider("https://sepolia.infura.io/v3/73d62d6d12454a5d8866f12d641e9dc5"));
+    var abi = LotteryManagerABI;
+    var contractAddress = "0xce617a0Bc3a26A5F880AADEB70A6390CDb8fBfC4";
+    var contract = new web3.eth.Contract(abi, contractAddress);
+    return { web3: web3, contract: contract };
+}
 var bot = new telegraf_1.Telegraf(BOT_TOKEN);
 bot.use(telegraf_1.Telegraf.log());
 bot.start(function (ctx) {
@@ -71,7 +78,7 @@ bot.action("how_to_play", function (ctx) {
     return ctx.reply("How To Play\n    1. Buy a ticket for 0.0001 ETH\n    2. Wait for the lottery to end\n    3. If your ticket is drawn, you win the NFT!");
 });
 bot.action("view_open_lottery", function (ctx) { return __awaiter(void 0, void 0, void 0, function () {
-    var response, data, openLotteries, error_1;
+    var response, data, openLotteries, buttons, error_1;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -83,7 +90,12 @@ bot.action("view_open_lottery", function (ctx) { return __awaiter(void 0, void 0
             case 2:
                 data = _a.sent();
                 openLotteries = data.openLotteries;
-                ctx.reply("Open Lotteries: ".concat(openLotteries));
+                buttons = openLotteries.map(function (lotteryId) {
+                    return [
+                        telegraf_1.Markup.button.callback("Buy Tickets for Lottery ".concat(lotteryId), "buy_ticket_".concat(lotteryId)),
+                    ];
+                });
+                ctx.reply("Open Lotteries: ".concat(openLotteries), telegraf_1.Markup.inlineKeyboard(buttons));
                 return [3 /*break*/, 4];
             case 3:
                 error_1 = _a.sent();
@@ -119,13 +131,16 @@ app.post("/wallet-address", function (req, res) { return __awaiter(void 0, void 
                 _a.label = 1;
             case 1:
                 _a.trys.push([1, 4, , 5]);
-                return [4 /*yield*/, bot.telegram.sendMessage(chatID, "Congrets! Your Wallet Are Securely Connected\n         Wallet Address: ".concat(walletAddress))];
+                return [4 /*yield*/, bot.telegram.sendMessage(chatID, "Congrets! Your Wallet Are Securely Connected!")];
             case 2:
                 _a.sent();
                 // 紧接着发送带有三个按钮的消息
                 return [4 /*yield*/, bot.telegram.sendMessage(chatID, "Choose an option:", telegraf_1.Markup.inlineKeyboard([
                         [telegraf_1.Markup.button.callback("How To Play 😎", "how_to_play")],
                         [telegraf_1.Markup.button.callback("View Open Lottery 🔍", "view_open_lottery")],
+                        [
+                            telegraf_1.Markup.button.callback("View Lottery Winner 🔍", "view_closed_lottery"),
+                        ],
                         [telegraf_1.Markup.button.callback("View My Lottery Ticket", "view_my_ticket")],
                         [telegraf_1.Markup.button.callback("View My Current Balance", "view_my_balance")],
                         [
@@ -147,19 +162,16 @@ app.post("/wallet-address", function (req, res) { return __awaiter(void 0, void 
     });
 }); });
 app.get("/view_open_lottery", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var web3, abi, contractAddress, contract, openLotteries, error_3;
+    var contract, openLotteries, error_3;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
                 _a.trys.push([0, 2, , 3]);
-                web3 = new Web3(new Web3.providers.HttpProvider("https://sepolia.infura.io/v3/73d62d6d12454a5d8866f12d641e9dc5"));
-                abi = LotteryManagerABI;
-                contractAddress = "0xce617a0Bc3a26A5F880AADEB70A6390CDb8fBfC4";
-                contract = new web3.eth.Contract(abi, contractAddress);
+                contract = initializeWeb3Contract().contract;
                 return [4 /*yield*/, contract.methods.getOpenLotteries().call()];
             case 1:
                 openLotteries = _a.sent();
-                console.log("Open Lotteries:", openLotteries); // <-- 添加这一行
+                console.log("Open Lotteries:", openLotteries);
                 res.status(200).json({ openLotteries: openLotteries });
                 return [3 /*break*/, 3];
             case 2:

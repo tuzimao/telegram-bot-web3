@@ -10,7 +10,7 @@ async function main() {
   const lotteryManagerAddress = "0xce617a0Bc3a26A5F880AADEB70A6390CDb8fBfC4";
 
   // 要传输的NFT的tokenId
-  const tokenId = 1; // 例如，传输tokenId为1的NFT
+  const tokenId = 3; // 例如，传输tokenId为1的NFT
 
   // 获取SimpleNFT合约的实例
   const SimpleNFT = await ethers.getContractFactory("SimpleNFT");

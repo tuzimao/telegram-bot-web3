@@ -14,6 +14,20 @@ if (!BOT_TOKEN) {
   throw new Error("TELEGRAM_BOT_TOKEN is not set in .env file");
 }
 
+function initializeWeb3Contract() {
+  const web3 = new Web3(
+    new Web3.providers.HttpProvider(
+      "https://sepolia.infura.io/v3/73d62d6d12454a5d8866f12d641e9dc5"
+    )
+  );
+
+  const abi = LotteryManagerABI;
+  const contractAddress = "0xce617a0Bc3a26A5F880AADEB70A6390CDb8fBfC4";
+  const contract = new web3.eth.Contract(abi, contractAddress);
+
+  return { web3, contract };
+}
+
 const bot = new Telegraf(BOT_TOKEN);
 bot.use(Telegraf.log());
 bot.start((ctx) => {
@@ -50,7 +64,20 @@ bot.action("view_open_lottery", async (ctx) => {
     const response = await fetch("http://localhost:4000/view_open_lottery");
     const data = await response.json();
     const openLotteries = data.openLotteries;
-    ctx.reply(`Open Lotteries: ${openLotteries}`);
+
+    const buttons = openLotteries.map((lotteryId: number) => {
+      return [
+        Markup.button.callback(
+          `Buy Tickets for Lottery ${lotteryId}`,
+          `buy_ticket_${lotteryId}`
+        ),
+      ];
+    });
+
+    ctx.reply(
+      `Open Lotteries: ${openLotteries}`,
+      Markup.inlineKeyboard(buttons)
+    );
   } catch (error) {
     ctx.reply("Error fetching open lotteries. Please try again later.");
   }
@@ -83,8 +110,7 @@ app.post("/wallet-address", async (req, res) => {
   try {
     await bot.telegram.sendMessage(
       chatID,
-      `Congrets! Your Wallet Are Securely Connected
-         Wallet Address: ${walletAddress}`
+      `Congrets! Your Wallet Are Securely Connected!`
     );
 
     // 紧接着发送带有三个按钮的消息
@@ -94,6 +120,12 @@ app.post("/wallet-address", async (req, res) => {
       Markup.inlineKeyboard([
         [Markup.button.callback("How To Play 😎", "how_to_play")],
         [Markup.button.callback("View Open Lottery 🔍", "view_open_lottery")],
+        [
+          Markup.button.callback(
+            "View Lottery Winner 🔍",
+            "view_closed_lottery"
+          ),
+        ],
         [Markup.button.callback("View My Lottery Ticket", "view_my_ticket")],
         [Markup.button.callback("View My Current Balance", "view_my_balance")],
         [
@@ -114,20 +146,10 @@ app.post("/wallet-address", async (req, res) => {
 
 app.get("/view_open_lottery", async (req, res) => {
   try {
-    // 初始化 Web3 和合约，这和您前端的代码类似
-    const web3 = new Web3(
-      new Web3.providers.HttpProvider(
-        "https://sepolia.infura.io/v3/73d62d6d12454a5d8866f12d641e9dc5"
-      )
-    );
-
-    const abi = LotteryManagerABI;
-    const contractAddress = "0xce617a0Bc3a26A5F880AADEB70A6390CDb8fBfC4";
-    const contract = new web3.eth.Contract(abi, contractAddress);
-
+    const { contract } = initializeWeb3Contract();
     // 获取开放的彩票
     const openLotteries = await contract.methods.getOpenLotteries().call();
-    console.log("Open Lotteries:", openLotteries); // <-- 添加这一行
+    console.log("Open Lotteries:", openLotteries);
     res.status(200).json({ openLotteries });
   } catch (error) {
     console.error("Error fetching open lotteries:", error);
