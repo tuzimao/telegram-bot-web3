@@ -126,7 +126,7 @@ bot.on("text", async (ctx) => {
         Markup.inlineKeyboard([
           [
             Markup.button.callback(
-              `Confirm Buy ${numberOfTickets} tickets`,
+              `Confirm`,
               `confirm_buy_${numberOfTickets}_${userQuery.lotteryId}`
             ),
             Markup.button.callback("Cancel", "cancel_buy"),

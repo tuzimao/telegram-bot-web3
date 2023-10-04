@@ -45,6 +45,7 @@
     ]
   },
   "devDependencies": {
+    "@types/socket.io-client": "^3.0.0",
     "typescript": "5.1"
   }
 }

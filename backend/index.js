@@ -56,6 +56,36 @@ function initializeWeb3Contract() {
     var contract = new web3.eth.Contract(abi, contractAddress);
     return { web3: web3, contract: contract };
 }
+function displayOpenLotteries(ctx) {
+    return __awaiter(this, void 0, void 0, function () {
+        var response, data, openLotteries, buttons, error_1;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    _a.trys.push([0, 3, , 4]);
+                    return [4 /*yield*/, fetch("http://localhost:4000/view_open_lottery")];
+                case 1:
+                    response = _a.sent();
+                    return [4 /*yield*/, response.json()];
+                case 2:
+                    data = _a.sent();
+                    openLotteries = data.openLotteries;
+                    buttons = openLotteries.map(function (lotteryId) {
+                        return [
+                            telegraf_1.Markup.button.callback("Buy Tickets for Lottery ".concat(lotteryId), "buy_ticket_".concat(lotteryId)),
+                        ];
+                    });
+                    ctx.reply("Open Lotteries: ".concat(openLotteries), telegraf_1.Markup.inlineKeyboard(buttons));
+                    return [3 /*break*/, 4];
+                case 3:
+                    error_1 = _a.sent();
+                    ctx.reply("Error fetching open lotteries. Please try again later.");
+                    return [3 /*break*/, 4];
+                case 4: return [2 /*return*/];
+            }
+        });
+    });
+}
 var bot = new telegraf_1.Telegraf(BOT_TOKEN);
 bot.use(telegraf_1.Telegraf.log());
 bot.start(function (ctx) {
@@ -78,30 +108,15 @@ bot.action("how_to_play", function (ctx) {
     return ctx.reply("How To Play\n    1. Buy a ticket for 0.0001 ETH\n    2. Wait for the lottery to end\n    3. If your ticket is drawn, you win the NFT!");
 });
 bot.action("view_open_lottery", function (ctx) { return __awaiter(void 0, void 0, void 0, function () {
-    var response, data, openLotteries, buttons, error_1;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
-                _a.trys.push([0, 3, , 4]);
-                return [4 /*yield*/, fetch("http://localhost:4000/view_open_lottery")];
+                // 这里你可以写代码来处理 "View Open Lottery" 的逻辑
+                ctx.answerCbQuery("Fetching open lotteries..."); // 这只是一个示例回复
+                return [4 /*yield*/, displayOpenLotteries(ctx)];
             case 1:
-                response = _a.sent();
-                return [4 /*yield*/, response.json()];
-            case 2:
-                data = _a.sent();
-                openLotteries = data.openLotteries;
-                buttons = openLotteries.map(function (lotteryId) {
-                    return [
-                        telegraf_1.Markup.button.callback("Buy Tickets for Lottery ".concat(lotteryId), "buy_ticket_".concat(lotteryId)),
-                    ];
-                });
-                ctx.reply("Open Lotteries: ".concat(openLotteries), telegraf_1.Markup.inlineKeyboard(buttons));
-                return [3 /*break*/, 4];
-            case 3:
-                error_1 = _a.sent();
-                ctx.reply("Error fetching open lotteries. Please try again later.");
-                return [3 /*break*/, 4];
-            case 4: return [2 /*return*/];
+                _a.sent();
+                return [2 /*return*/];
         }
     });
 }); });
@@ -135,15 +150,45 @@ bot.on("text", function (ctx) { return __awaiter(void 0, void 0, void 0, functio
         if (userQuery && userQuery.type === "buyTicket") {
             numberOfTickets = parseInt(text, 10);
             if (numberOfTickets >= 1 && numberOfTickets <= 10) {
-                // TODO: Send lotteryId and numberOfTickets to the frontend
-                // ...
-                delete userQueries[chatId];
+                // 提供确认和取消按钮
+                ctx.reply("Do you want to buy ".concat(numberOfTickets, " tickets for Lottery ").concat(userQuery.lotteryId, "?"), telegraf_1.Markup.inlineKeyboard([
+                    [
+                        telegraf_1.Markup.button.callback("Confirm Buy ".concat(numberOfTickets, " tickets"), "confirm_buy_".concat(numberOfTickets, "_").concat(userQuery.lotteryId)),
+                        telegraf_1.Markup.button.callback("Cancel", "cancel_buy"),
+                    ],
+                ]));
             }
             else {
                 ctx.reply("Please enter a valid number between 1 and 10.");
             }
         }
         return [2 /*return*/];
+    });
+}); });
+bot.action(/confirm_buy_([0-9]+)_([0-9]+)/, function (ctx) { return __awaiter(void 0, void 0, void 0, function () {
+    var numberOfTickets, lotteryId;
+    return __generator(this, function (_a) {
+        numberOfTickets = ctx.match[1];
+        lotteryId = ctx.match[2];
+        // TODO: Send lotteryId and numberOfTickets to the frontend
+        ctx.reply("Confirmed purchase of ".concat(numberOfTickets, " tickets for Lottery ").concat(lotteryId, ". Processing..."));
+        return [2 /*return*/];
+    });
+}); });
+bot.action("cancel_buy", function (ctx) { return __awaiter(void 0, void 0, void 0, function () {
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0: 
+            // Return to the view_open_lottery level
+            return [4 /*yield*/, ctx.reply("Purchase cancelled.")];
+            case 1:
+                // Return to the view_open_lottery level
+                _a.sent();
+                return [4 /*yield*/, displayOpenLotteries(ctx)];
+            case 2:
+                _a.sent();
+                return [2 /*return*/];
+        }
     });
 }); });
 bot.action("my_ticket", function (ctx) {
