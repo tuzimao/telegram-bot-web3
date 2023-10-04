@@ -41,6 +41,8 @@ var express = require("express");
 var cors = require("cors");
 var telegraf_1 = require("telegraf");
 var dotenv = require("dotenv");
+var Web3 = require("web3");
+var LotteryManagerABI = require("./LotteryManagerABI.json");
 dotenv.config();
 // const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN as string;
 var BOT_TOKEN = "6664428098:AAFpDzmvmTNDETnkXgsdcC6UFt_TZsTrFWo";
@@ -56,11 +58,11 @@ bot.start(function (ctx) {
 });
 bot.command("menu", function (ctx) {
     return ctx.reply("Choose an option:", telegraf_1.Markup.inlineKeyboard([
-        [telegraf_1.Markup.button.callback("How To Play😎", "how_to_play")],
-        [telegraf_1.Markup.button.callback("View Open Lottery🔍", "open_lottery")],
-        [telegraf_1.Markup.button.callback("View My Lottery Ticket", "my_ticket")],
-        [telegraf_1.Markup.button.callback("View My Current Balance", "my_balance")],
-        [telegraf_1.Markup.button.callback("Transfer My NFT Into Pool", "transfer_nft")],
+        [telegraf_1.Markup.button.callback("How To Play 😎", "how_to_play")],
+        [telegraf_1.Markup.button.callback("View Open Lottery 🔍", "view_open_lottery")],
+        [telegraf_1.Markup.button.callback("View My Lottery Ticket", "view_my_ticket")],
+        [telegraf_1.Markup.button.callback("View My Current Balance", "view_my_balance")],
+        [telegraf_1.Markup.button.callback("Transfer My NFT Into Pool", "transfer_nft_in")],
     ]));
 });
 bot.action("how_to_play", function (ctx) {
@@ -68,10 +70,29 @@ bot.action("how_to_play", function (ctx) {
     ctx.answerCbQuery("Fetching how to play..."); // 这只是一个示例回复
     return ctx.reply("How To Play\n    1. Buy a ticket for 0.0001 ETH\n    2. Wait for the lottery to end\n    3. If your ticket is drawn, you win the NFT!");
 });
-bot.action("open_lottery", function (ctx) {
-    // 这里你可以写代码来处理 "View Open Lottery" 的逻辑
-    ctx.answerCbQuery("Fetching open lotteries..."); // 这只是一个示例回复
-});
+bot.action("view_open_lottery", function (ctx) { return __awaiter(void 0, void 0, void 0, function () {
+    var response, data, openLotteries, error_1;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 3, , 4]);
+                return [4 /*yield*/, fetch("http://localhost:4000/view_open_lottery")];
+            case 1:
+                response = _a.sent();
+                return [4 /*yield*/, response.json()];
+            case 2:
+                data = _a.sent();
+                openLotteries = data.openLotteries;
+                ctx.reply("Open Lotteries: ".concat(openLotteries));
+                return [3 /*break*/, 4];
+            case 3:
+                error_1 = _a.sent();
+                ctx.reply("Error fetching open lotteries. Please try again later.");
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); });
 bot.action("my_ticket", function (ctx) {
     // 这里你可以写代码来处理 "View My Lottery Ticket" 的逻辑
     ctx.answerCbQuery("Fetching your lottery ticket..."); // 这只是一个示例回复
@@ -89,7 +110,7 @@ var app = express();
 app.use(cors());
 app.use(express.json());
 app.post("/wallet-address", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var walletAddress, chatID, error_1;
+    var walletAddress, chatID, error_2;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -104,10 +125,12 @@ app.post("/wallet-address", function (req, res) { return __awaiter(void 0, void 
                 // 紧接着发送带有三个按钮的消息
                 return [4 /*yield*/, bot.telegram.sendMessage(chatID, "Choose an option:", telegraf_1.Markup.inlineKeyboard([
                         [telegraf_1.Markup.button.callback("How To Play 😎", "how_to_play")],
-                        [telegraf_1.Markup.button.callback("View Open Lottery 🔍", "open_lottery")],
-                        [telegraf_1.Markup.button.callback("View My Lottery Ticket", "my_ticket")],
-                        [telegraf_1.Markup.button.callback("View My Current Balance", "my_balance")],
-                        [telegraf_1.Markup.button.callback("Transfer My NFT Into Pool", "transfer_nft")],
+                        [telegraf_1.Markup.button.callback("View Open Lottery 🔍", "view_open_lottery")],
+                        [telegraf_1.Markup.button.callback("View My Lottery Ticket", "view_my_ticket")],
+                        [telegraf_1.Markup.button.callback("View My Current Balance", "view_my_balance")],
+                        [
+                            telegraf_1.Markup.button.callback("Transfer My NFT Into Pool", "transfer_nft_in"),
+                        ],
                     ]))];
             case 3:
                 // 紧接着发送带有三个按钮的消息
@@ -115,11 +138,36 @@ app.post("/wallet-address", function (req, res) { return __awaiter(void 0, void 
                 res.status(200).send({ message: "Address received and sent to Telegram!" });
                 return [3 /*break*/, 5];
             case 4:
-                error_1 = _a.sent();
-                console.error("Error sending message to Telegram:", error_1);
+                error_2 = _a.sent();
+                console.error("Error sending message to Telegram:", error_2);
                 res.status(500).send({ message: "Failed to send message to Telegram." });
                 return [3 /*break*/, 5];
             case 5: return [2 /*return*/];
+        }
+    });
+}); });
+app.get("/view_open_lottery", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
+    var web3, abi, contractAddress, contract, openLotteries, error_3;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 2, , 3]);
+                web3 = new Web3(new Web3.providers.HttpProvider("https://sepolia.infura.io/v3/73d62d6d12454a5d8866f12d641e9dc5"));
+                abi = LotteryManagerABI;
+                contractAddress = "0xce617a0Bc3a26A5F880AADEB70A6390CDb8fBfC4";
+                contract = new web3.eth.Contract(abi, contractAddress);
+                return [4 /*yield*/, contract.methods.getOpenLotteries().call()];
+            case 1:
+                openLotteries = _a.sent();
+                console.log("Open Lotteries:", openLotteries); // <-- 添加这一行
+                res.status(200).json({ openLotteries: openLotteries });
+                return [3 /*break*/, 3];
+            case 2:
+                error_3 = _a.sent();
+                console.error("Error fetching open lotteries:", error_3);
+                res.status(500).send({ message: "Failed to fetch open lotteries." });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
         }
     });
 }); });

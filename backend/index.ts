@@ -3,6 +3,8 @@ import * as express from "express";
 import * as cors from "cors";
 import { Telegraf, Markup } from "telegraf";
 import * as dotenv from "dotenv";
+const Web3 = require("web3");
+const LotteryManagerABI = require("./LotteryManagerABI.json");
 
 dotenv.config();
 
@@ -25,11 +27,11 @@ bot.command("menu", (ctx) => {
   return ctx.reply(
     "Choose an option:",
     Markup.inlineKeyboard([
-      [Markup.button.callback("How To Play😎", "how_to_play")],
-      [Markup.button.callback("View Open Lottery🔍", "open_lottery")],
-      [Markup.button.callback("View My Lottery Ticket", "my_ticket")],
-      [Markup.button.callback("View My Current Balance", "my_balance")],
-      [Markup.button.callback("Transfer My NFT Into Pool", "transfer_nft")],
+      [Markup.button.callback("How To Play 😎", "how_to_play")],
+      [Markup.button.callback("View Open Lottery 🔍", "view_open_lottery")],
+      [Markup.button.callback("View My Lottery Ticket", "view_my_ticket")],
+      [Markup.button.callback("View My Current Balance", "view_my_balance")],
+      [Markup.button.callback("Transfer My NFT Into Pool", "transfer_nft_in")],
     ])
   );
 });
@@ -43,9 +45,15 @@ bot.action("how_to_play", (ctx) => {
     3. If your ticket is drawn, you win the NFT!`
   );
 });
-bot.action("open_lottery", (ctx) => {
-  // 这里你可以写代码来处理 "View Open Lottery" 的逻辑
-  ctx.answerCbQuery("Fetching open lotteries..."); // 这只是一个示例回复
+bot.action("view_open_lottery", async (ctx) => {
+  try {
+    const response = await fetch("http://localhost:4000/view_open_lottery");
+    const data = await response.json();
+    const openLotteries = data.openLotteries;
+    ctx.reply(`Open Lotteries: ${openLotteries}`);
+  } catch (error) {
+    ctx.reply("Error fetching open lotteries. Please try again later.");
+  }
 });
 
 bot.action("my_ticket", (ctx) => {
@@ -101,6 +109,29 @@ app.post("/wallet-address", async (req, res) => {
   } catch (error) {
     console.error("Error sending message to Telegram:", error);
     res.status(500).send({ message: "Failed to send message to Telegram." });
+  }
+});
+
+app.get("/view_open_lottery", async (req, res) => {
+  try {
+    // 初始化 Web3 和合约，这和您前端的代码类似
+    const web3 = new Web3(
+      new Web3.providers.HttpProvider(
+        "https://sepolia.infura.io/v3/73d62d6d12454a5d8866f12d641e9dc5"
+      )
+    );
+
+    const abi = LotteryManagerABI;
+    const contractAddress = "0xce617a0Bc3a26A5F880AADEB70A6390CDb8fBfC4";
+    const contract = new web3.eth.Contract(abi, contractAddress);
+
+    // 获取开放的彩票
+    const openLotteries = await contract.methods.getOpenLotteries().call();
+    console.log("Open Lotteries:", openLotteries); // <-- 添加这一行
+    res.status(200).json({ openLotteries });
+  } catch (error) {
+    console.error("Error fetching open lotteries:", error);
+    res.status(500).send({ message: "Failed to fetch open lotteries." });
   }
 });
 
