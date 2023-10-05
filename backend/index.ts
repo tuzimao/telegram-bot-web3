@@ -3,6 +3,14 @@ import * as express from "express";
 import * as cors from "cors";
 import { Telegraf, Markup } from "telegraf";
 import * as dotenv from "dotenv";
+import * as http from "http";
+import * as socketIo from "socket.io";
+declare module "telegraf" {
+  interface Context {
+    socket?: any;
+  }
+}
+
 const Web3 = require("web3");
 const LotteryManagerABI = require("./LotteryManagerABI.json");
 
@@ -54,6 +62,7 @@ async function displayOpenLotteries(ctx: any) {
 
 const bot = new Telegraf(BOT_TOKEN);
 bot.use(Telegraf.log());
+
 bot.start((ctx) => {
   const chatID = ctx.message.chat.id;
   const firstName = ctx.message.from.first_name;
@@ -143,7 +152,7 @@ bot.action(/confirm_buy_([0-9]+)_([0-9]+)/, async (ctx) => {
   const numberOfTickets = ctx.match![1];
   const lotteryId = ctx.match![2];
 
-  // TODO: Send lotteryId and numberOfTickets to the frontend
+  ctx.socket.emit("buyTicketRequest", { numberOfTickets, lotteryId }); // 使用ctx.socket发送数据到前端
 
   ctx.reply(
     `Confirmed purchase of ${numberOfTickets} tickets for Lottery ${lotteryId}. Processing...`
@@ -170,11 +179,29 @@ bot.action("transfer_nft", (ctx) => {
   ctx.answerCbQuery("Transferring your NFT into the pool..."); // 这只是一个示例回复
 });
 
-bot.launch();
-
 const app = express();
 app.use(cors());
 app.use(express.json());
+const server = http.createServer(app);
+const io = new socketIo.Server(server);
+
+let currentSocket: any = null;
+
+io.on("connection", (socket) => {
+  console.log("A user connected");
+  currentSocket = socket;
+
+  socket.on("disconnect", () => {
+    console.log("A user disconnected");
+    if (currentSocket === socket) {
+      currentSocket = null;
+    }
+  });
+});
+bot.use((ctx, next) => {
+  ctx.socket = currentSocket;
+  return next();
+});
 
 app.post("/wallet-address", async (req, res) => {
   const walletAddress = req.body.walletAddress;
@@ -230,6 +257,7 @@ app.get("/view_open_lottery", async (req, res) => {
   }
 });
 
-app.listen(4000, () => {
+bot.launch();
+server.listen(4000, () => {
   console.log("Server is running on http://localhost:4000");
 });

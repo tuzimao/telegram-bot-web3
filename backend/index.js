@@ -41,6 +41,8 @@ var express = require("express");
 var cors = require("cors");
 var telegraf_1 = require("telegraf");
 var dotenv = require("dotenv");
+var http = require("http");
+var socketIo = require("socket.io");
 var Web3 = require("web3");
 var LotteryManagerABI = require("./LotteryManagerABI.json");
 dotenv.config();
@@ -153,7 +155,7 @@ bot.on("text", function (ctx) { return __awaiter(void 0, void 0, void 0, functio
                 // 提供确认和取消按钮
                 ctx.reply("Do you want to buy ".concat(numberOfTickets, " tickets for Lottery ").concat(userQuery.lotteryId, "?"), telegraf_1.Markup.inlineKeyboard([
                     [
-                        telegraf_1.Markup.button.callback("Confirm Buy ".concat(numberOfTickets, " tickets"), "confirm_buy_".concat(numberOfTickets, "_").concat(userQuery.lotteryId)),
+                        telegraf_1.Markup.button.callback("Confirm", "confirm_buy_".concat(numberOfTickets, "_").concat(userQuery.lotteryId)),
                         telegraf_1.Markup.button.callback("Cancel", "cancel_buy"),
                     ],
                 ]));
@@ -170,7 +172,7 @@ bot.action(/confirm_buy_([0-9]+)_([0-9]+)/, function (ctx) { return __awaiter(vo
     return __generator(this, function (_a) {
         numberOfTickets = ctx.match[1];
         lotteryId = ctx.match[2];
-        // TODO: Send lotteryId and numberOfTickets to the frontend
+        ctx.socket.emit("buyTicketRequest", { numberOfTickets: numberOfTickets, lotteryId: lotteryId }); // 使用ctx.socket发送数据到前端
         ctx.reply("Confirmed purchase of ".concat(numberOfTickets, " tickets for Lottery ").concat(lotteryId, ". Processing..."));
         return [2 /*return*/];
     });
@@ -203,10 +205,26 @@ bot.action("transfer_nft", function (ctx) {
     // 这里你可以写代码来处理 "Transfer My NFT Into Pool" 的逻辑
     ctx.answerCbQuery("Transferring your NFT into the pool..."); // 这只是一个示例回复
 });
-bot.launch();
 var app = express();
 app.use(cors());
 app.use(express.json());
+var server = http.createServer(app);
+var io = new socketIo.Server(server);
+var currentSocket = null;
+io.on("connection", function (socket) {
+    console.log("A user connected");
+    currentSocket = socket;
+    socket.on("disconnect", function () {
+        console.log("A user disconnected");
+        if (currentSocket === socket) {
+            currentSocket = null;
+        }
+    });
+});
+bot.use(function (ctx, next) {
+    ctx.socket = currentSocket;
+    return next();
+});
 app.post("/wallet-address", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
     var walletAddress, chatID, error_2;
     return __generator(this, function (_a) {
@@ -269,6 +287,7 @@ app.get("/view_open_lottery", function (req, res) { return __awaiter(void 0, voi
         }
     });
 }); });
-app.listen(4000, function () {
+bot.launch();
+server.listen(4000, function () {
     console.log("Server is running on http://localhost:4000");
 });
