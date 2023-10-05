@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Web3 from "web3";
 import { WagmiConfig, createConfig } from "wagmi";
 import {
@@ -17,6 +17,11 @@ import {
 import { useAccount } from "wagmi";
 import { sendAddressToServer } from "./getWalletAddressAPI";
 import LotteryManagerABI from "./LotteryManagerABI.json";
+import io from "socket.io-client";
+interface TicketRequest {
+  lotteryId: string;
+  numberOfTickets: string;
+}
 
 const chains = [mainnet, polygon, optimism, arbitrum, goerli, sepolia];
 
@@ -96,12 +101,40 @@ const WalletStatus = () => {
 };
 
 const App = () => {
+  const [ticketRequest, setTicketRequest] = useState<TicketRequest | null>(
+    null
+  );
+  useEffect(() => {
+    // Connect to the server
+    const socket = io("http://localhost:4000");
+    const chatID = window.location.pathname.split("/")[1];
+    console.log("Emitting setChatId with chatId:", chatID);
+    socket.emit("setChatId", chatID);
+
+    // Listen for the buyTicketRequest event from the server
+    socket.on("buyTicketRequest", (data) => {
+      console.log("Received buyTicketRequest:", data);
+      setTicketRequest(data);
+    });
+
+    // Clean up the socket connection when the component is unmounted
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
   return (
     <WagmiConfig config={config}>
       <ConnectKitProvider>
         {/* ... */}
         <ConnectKitButton />
         <WalletStatus />
+        {/* Display the ticket request data if it exists */}
+        {ticketRequest && (
+          <div>
+            <p>Lottery ID: {ticketRequest.lotteryId}</p>
+            <p>Number of Tickets: {ticketRequest.numberOfTickets}</p>
+          </div>
+        )}
       </ConnectKitProvider>
     </WagmiConfig>
   );

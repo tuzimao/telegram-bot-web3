@@ -16,6 +16,46 @@ const LotteryManagerABI = require("./LotteryManagerABI.json");
 
 dotenv.config();
 
+const app = express();
+app.use(
+  cors({
+    origin: "http://localhost:3000", // 允许的源
+    credentials: true,
+  })
+);
+app.use(express.json());
+const server = http.createServer(app);
+const io = new socketIo.Server(server, {
+  cors: {
+    origin: "http://localhost:3000", // 允许的源
+    methods: ["GET", "POST"], // 允许的 HTTP 方法
+    allowedHeaders: ["my-custom-header"], // 允许的头部
+    credentials: true, // 允许凭据
+  },
+});
+
+let currentSocket: any = null;
+
+const activeSockets: { [chatId: string]: any } = {};
+
+io.on("connection", (socket) => {
+  console.log("A user connected");
+
+  socket.on("setChatId", (chatId) => {
+    console.log("setChatId received with chatId:", chatId);
+    activeSockets[chatId] = socket;
+  });
+
+  socket.on("disconnect", () => {
+    console.log("A user disconnected");
+    // 删除这个 socket 从 activeSockets 对象
+    for (let chatId in activeSockets) {
+      if (activeSockets[chatId] === socket) {
+        delete activeSockets[chatId];
+      }
+    }
+  });
+});
 // const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN as string;
 const BOT_TOKEN = "6664428098:AAFpDzmvmTNDETnkXgsdcC6UFt_TZsTrFWo";
 if (!BOT_TOKEN) {
@@ -81,6 +121,27 @@ bot.command("menu", (ctx) => {
       [Markup.button.callback("Transfer My NFT Into Pool", "transfer_nft_in")],
     ])
   );
+});
+bot.use((ctx, next) => {
+  let chatId;
+  if ("callback_query" in ctx.update) {
+    chatId = (ctx.update as any).callback_query.message.chat.id.toString();
+  } else if ("message" in ctx.update) {
+    chatId = (ctx.update as any).message.chat.id.toString();
+  }
+
+  ctx.socket = activeSockets[chatId];
+  console.log("Active sockets chatIds:", Object.keys(activeSockets));
+  console.log("Socket for current chatId:", ctx.socket);
+
+  // if (ctx.socket) {
+  //   console.log("Emitting buyTicketRequest to frontend with data:");
+  //   ctx.socket.emit("buyTicketRequest", { numberOfTickets: 1, lotteryId: 1 });
+  // } else {
+  //   console.error("No active socket connection to send data to frontend.");
+  // }
+
+  return next();
 });
 bot.action("how_to_play", (ctx) => {
   // 这里你可以写代码来处理 "How To Play" 的逻辑
@@ -152,7 +213,15 @@ bot.action(/confirm_buy_([0-9]+)_([0-9]+)/, async (ctx) => {
   const numberOfTickets = ctx.match![1];
   const lotteryId = ctx.match![2];
 
-  ctx.socket.emit("buyTicketRequest", { numberOfTickets, lotteryId }); // 使用ctx.socket发送数据到前端
+  if (ctx.socket) {
+    console.log("Emitting buyTicketRequest to frontend with data:", {
+      numberOfTickets,
+      lotteryId,
+    });
+    ctx.socket.emit("buyTicketRequest", { numberOfTickets, lotteryId });
+  } else {
+    console.error("No active socket connection to send data to frontend.");
+  }
 
   ctx.reply(
     `Confirmed purchase of ${numberOfTickets} tickets for Lottery ${lotteryId}. Processing...`
@@ -177,30 +246,6 @@ bot.action("my_balance", (ctx) => {
 bot.action("transfer_nft", (ctx) => {
   // 这里你可以写代码来处理 "Transfer My NFT Into Pool" 的逻辑
   ctx.answerCbQuery("Transferring your NFT into the pool..."); // 这只是一个示例回复
-});
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-const server = http.createServer(app);
-const io = new socketIo.Server(server);
-
-let currentSocket: any = null;
-
-io.on("connection", (socket) => {
-  console.log("A user connected");
-  currentSocket = socket;
-
-  socket.on("disconnect", () => {
-    console.log("A user disconnected");
-    if (currentSocket === socket) {
-      currentSocket = null;
-    }
-  });
-});
-bot.use((ctx, next) => {
-  ctx.socket = currentSocket;
-  return next();
 });
 
 app.post("/wallet-address", async (req, res) => {

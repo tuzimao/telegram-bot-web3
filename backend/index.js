@@ -46,6 +46,39 @@ var socketIo = require("socket.io");
 var Web3 = require("web3");
 var LotteryManagerABI = require("./LotteryManagerABI.json");
 dotenv.config();
+var app = express();
+app.use(cors({
+    origin: "http://localhost:3000",
+    credentials: true
+}));
+app.use(express.json());
+var server = http.createServer(app);
+var io = new socketIo.Server(server, {
+    cors: {
+        origin: "http://localhost:3000",
+        methods: ["GET", "POST"],
+        allowedHeaders: ["my-custom-header"],
+        credentials: true
+    }
+});
+var currentSocket = null;
+var activeSockets = {};
+io.on("connection", function (socket) {
+    console.log("A user connected");
+    socket.on("setChatId", function (chatId) {
+        console.log("setChatId received with chatId:", chatId);
+        activeSockets[chatId] = socket;
+    });
+    socket.on("disconnect", function () {
+        console.log("A user disconnected");
+        // 删除这个 socket 从 activeSockets 对象
+        for (var chatId in activeSockets) {
+            if (activeSockets[chatId] === socket) {
+                delete activeSockets[chatId];
+            }
+        }
+    });
+});
 // const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN as string;
 var BOT_TOKEN = "6664428098:AAFpDzmvmTNDETnkXgsdcC6UFt_TZsTrFWo";
 if (!BOT_TOKEN) {
@@ -103,6 +136,26 @@ bot.command("menu", function (ctx) {
         [telegraf_1.Markup.button.callback("View My Current Balance", "view_my_balance")],
         [telegraf_1.Markup.button.callback("Transfer My NFT Into Pool", "transfer_nft_in")],
     ]));
+});
+bot.use(function (ctx, next) {
+    var chatId;
+    if ("callback_query" in ctx.update) {
+        chatId = ctx.update.callback_query.message.chat.id.toString();
+    }
+    else if ("message" in ctx.update) {
+        chatId = ctx.update.message.chat.id.toString();
+    }
+    ctx.socket = activeSockets[chatId];
+    console.log("Active sockets chatIds:", Object.keys(activeSockets));
+    console.log("Socket for current chatId:", ctx.socket);
+    if (ctx.socket) {
+        console.log("Emitting buyTicketRequest to frontend with data:");
+        ctx.socket.emit("buyTicketRequest", { numberOfTickets: 1, lotteryId: 1 });
+    }
+    else {
+        console.error("No active socket connection to send data to frontend.");
+    }
+    return next();
 });
 bot.action("how_to_play", function (ctx) {
     // 这里你可以写代码来处理 "How To Play" 的逻辑
@@ -172,7 +225,16 @@ bot.action(/confirm_buy_([0-9]+)_([0-9]+)/, function (ctx) { return __awaiter(vo
     return __generator(this, function (_a) {
         numberOfTickets = ctx.match[1];
         lotteryId = ctx.match[2];
-        ctx.socket.emit("buyTicketRequest", { numberOfTickets: numberOfTickets, lotteryId: lotteryId }); // 使用ctx.socket发送数据到前端
+        if (ctx.socket) {
+            console.log("Emitting buyTicketRequest to frontend with data:", {
+                numberOfTickets: numberOfTickets,
+                lotteryId: lotteryId
+            });
+            ctx.socket.emit("buyTicketRequest", { numberOfTickets: numberOfTickets, lotteryId: lotteryId });
+        }
+        else {
+            console.error("No active socket connection to send data to frontend.");
+        }
         ctx.reply("Confirmed purchase of ".concat(numberOfTickets, " tickets for Lottery ").concat(lotteryId, ". Processing..."));
         return [2 /*return*/];
     });
@@ -204,26 +266,6 @@ bot.action("my_balance", function (ctx) {
 bot.action("transfer_nft", function (ctx) {
     // 这里你可以写代码来处理 "Transfer My NFT Into Pool" 的逻辑
     ctx.answerCbQuery("Transferring your NFT into the pool..."); // 这只是一个示例回复
-});
-var app = express();
-app.use(cors());
-app.use(express.json());
-var server = http.createServer(app);
-var io = new socketIo.Server(server);
-var currentSocket = null;
-io.on("connection", function (socket) {
-    console.log("A user connected");
-    currentSocket = socket;
-    socket.on("disconnect", function () {
-        console.log("A user disconnected");
-        if (currentSocket === socket) {
-            currentSocket = null;
-        }
-    });
-});
-bot.use(function (ctx, next) {
-    ctx.socket = currentSocket;
-    return next();
 });
 app.post("/wallet-address", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
     var walletAddress, chatID, error_2;
