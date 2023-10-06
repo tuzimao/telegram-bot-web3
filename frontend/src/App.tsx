@@ -24,6 +24,12 @@ interface TicketRequest {
   numberOfTickets: string;
 }
 
+declare global {
+  interface Window {
+    ethereum: any;
+  }
+}
+
 const chains = [mainnet, polygon, optimism, arbitrum, goerli, sepolia];
 
 const config = createConfig(
@@ -108,8 +114,8 @@ const buyTickets = async (
 ): Promise<void> => {
   // 确保你的 web3 provider 可用
   if (typeof window.ethereum !== "undefined") {
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    const signer = provider.getSigner();
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
 
     // 创建一个新的合约实例
     const lotteryContract = new ethers.Contract(
@@ -141,10 +147,12 @@ const buyTickets = async (
   }
 };
 
-const App = () => {
+const AppBody = () => {
   const [ticketRequest, setTicketRequest] = useState<TicketRequest | null>(
     null
   );
+  const { address } = useAccount(); // <-- Move this outside of useEffect
+
   useEffect(() => {
     // Connect to the server
     const socket = io("http://localhost:4000");
@@ -153,42 +161,49 @@ const App = () => {
     socket.emit("setChatId", chatID);
 
     // Listen for the buyTicketRequest event from the server
-    socket.on("buyTicketRequest", (data) => {
+    socket.on("buyTicketRequest", async (data) => {
+      // <-- Add async here
       console.log("Received buyTicketRequest:", data);
       setTicketRequest(data);
+
+      if (address) {
+        // 调用 buyTickets 函数执行购买
+        await buyTickets(
+          parseInt(data.lotteryId),
+          parseInt(data.numberOfTickets),
+          address
+        );
+      } else {
+        console.error("No connected wallet address found.");
+      }
     });
-    const { address } = useAccount();
-    if (address) {
-      // 调用 buyTickets 函数执行购买
-      await buyTickets(
-        parseInt(data.lotteryId),
-        parseInt(data.numberOfTickets),
-        address
-      );
-    } else {
-      console.error("No connected wallet address found.");
-    }
+
     // Clean up the socket connection when the component is unmounted
     return () => {
       socket.disconnect();
     };
-  }, []);
+  }, [address]); // <-- Add address as a dependency
+
   return (
-    <WagmiConfig config={config}>
-      <ConnectKitProvider>
-        {/* ... */}
-        <ConnectKitButton />
-        <WalletStatus />
-        {/* Display the ticket request data if it exists */}
-        {ticketRequest && (
-          <div>
-            <p>Lottery ID: {ticketRequest.lotteryId}</p>
-            <p>Number of Tickets: {ticketRequest.numberOfTickets}</p>
-          </div>
-        )}
-      </ConnectKitProvider>
-    </WagmiConfig>
+    <ConnectKitProvider>
+      <ConnectKitButton />
+      <WalletStatus />
+      {/* Display the ticket request data if it exists */}
+      {ticketRequest && (
+        <div>
+          <p>Lottery ID: {ticketRequest.lotteryId}</p>
+          <p>Number of Tickets: {ticketRequest.numberOfTickets}</p>
+        </div>
+      )}
+    </ConnectKitProvider>
   );
 };
 
+const App = () => {
+  return (
+    <WagmiConfig config={config}>
+      <AppBody />
+    </WagmiConfig>
+  );
+};
 export default App;
