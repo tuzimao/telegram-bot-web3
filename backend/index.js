@@ -69,6 +69,29 @@ io.on("connection", function (socket) {
         console.log("setChatId received with chatId:", chatId);
         activeSockets[chatId] = socket;
     });
+    socket.on("sendReceipt", function (data) { return __awaiter(void 0, void 0, void 0, function () {
+        var receipt, chatID, error_1;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    receipt = data.receipt;
+                    chatID = data.chatId;
+                    _a.label = 1;
+                case 1:
+                    _a.trys.push([1, 3, , 4]);
+                    return [4 /*yield*/, bot.telegram.sendMessage(chatID, "Purchase Successful! Here's your transaction receipt:\nTransaction Hash: ".concat(receipt.transactionHash, "\nBlock Number: ").concat(receipt.blockNumber, "\n...") // 根据需要添加更多的收据详情
+                        )];
+                case 2:
+                    _a.sent();
+                    return [3 /*break*/, 4];
+                case 3:
+                    error_1 = _a.sent();
+                    console.error("Error sending receipt to Telegram:", error_1);
+                    return [3 /*break*/, 4];
+                case 4: return [2 /*return*/];
+            }
+        });
+    }); });
     socket.on("disconnect", function () {
         console.log("A user disconnected");
         // 删除这个 socket 从 activeSockets 对象
@@ -93,7 +116,7 @@ function initializeWeb3Contract() {
 }
 function displayOpenLotteries(ctx) {
     return __awaiter(this, void 0, void 0, function () {
-        var response, data, openLotteries, buttons, error_1;
+        var response, data, openLotteries, buttons, error_2;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -113,7 +136,7 @@ function displayOpenLotteries(ctx) {
                     ctx.reply("Open Lotteries: ".concat(openLotteries), telegraf_1.Markup.inlineKeyboard(buttons));
                     return [3 /*break*/, 4];
                 case 3:
-                    error_1 = _a.sent();
+                    error_2 = _a.sent();
                     ctx.reply("Error fetching open lotteries. Please try again later.");
                     return [3 /*break*/, 4];
                 case 4: return [2 /*return*/];
@@ -148,13 +171,12 @@ bot.use(function (ctx, next) {
     ctx.socket = activeSockets[chatId];
     console.log("Active sockets chatIds:", Object.keys(activeSockets));
     console.log("Socket for current chatId:", ctx.socket);
-    if (ctx.socket) {
-        console.log("Emitting buyTicketRequest to frontend with data:");
-        ctx.socket.emit("buyTicketRequest", { numberOfTickets: 1, lotteryId: 1 });
-    }
-    else {
-        console.error("No active socket connection to send data to frontend.");
-    }
+    // if (ctx.socket) {
+    //   console.log("Emitting buyTicketRequest to frontend with data:");
+    //   ctx.socket.emit("buyTicketRequest", { numberOfTickets: 1, lotteryId: 1 });
+    // } else {
+    //   console.error("No active socket connection to send data to frontend.");
+    // }
     return next();
 });
 bot.action("how_to_play", function (ctx) {
@@ -268,7 +290,7 @@ bot.action("transfer_nft", function (ctx) {
     ctx.answerCbQuery("Transferring your NFT into the pool..."); // 这只是一个示例回复
 });
 app.post("/wallet-address", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var walletAddress, chatID, error_2;
+    var walletAddress, chatID, error_3;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -299,8 +321,8 @@ app.post("/wallet-address", function (req, res) { return __awaiter(void 0, void 
                 res.status(200).send({ message: "Address received and sent to Telegram!" });
                 return [3 /*break*/, 5];
             case 4:
-                error_2 = _a.sent();
-                console.error("Error sending message to Telegram:", error_2);
+                error_3 = _a.sent();
+                console.error("Error sending message to Telegram:", error_3);
                 res.status(500).send({ message: "Failed to send message to Telegram." });
                 return [3 /*break*/, 5];
             case 5: return [2 /*return*/];
@@ -308,7 +330,7 @@ app.post("/wallet-address", function (req, res) { return __awaiter(void 0, void 
     });
 }); });
 app.get("/view_open_lottery", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var contract, openLotteries, error_3;
+    var contract, openLotteries, error_4;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -321,8 +343,8 @@ app.get("/view_open_lottery", function (req, res) { return __awaiter(void 0, voi
                 res.status(200).json({ openLotteries: openLotteries });
                 return [3 /*break*/, 3];
             case 2:
-                error_3 = _a.sent();
-                console.error("Error fetching open lotteries:", error_3);
+                error_4 = _a.sent();
+                console.error("Error fetching open lotteries:", error_4);
                 res.status(500).send({ message: "Failed to fetch open lotteries." });
                 return [3 /*break*/, 3];
             case 3: return [2 /*return*/];

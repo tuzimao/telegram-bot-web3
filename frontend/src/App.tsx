@@ -110,7 +110,8 @@ const WalletStatus = () => {
 const buyTickets = async (
   lotteryId: number,
   numberOfTickets: number,
-  userAddress: string
+  userAddress: string,
+  socket: any
 ): Promise<void> => {
   // 确保你的 web3 provider 可用
   if (typeof window.ethereum !== "undefined") {
@@ -139,6 +140,10 @@ const buyTickets = async (
       // 等待交易被确认
       const receipt = await tx.wait();
       console.log("Transaction receipt:", receipt);
+      const chatId = window.location.pathname.split("/")[1]; // 从 URL 获取 chatId
+      if (socket) {
+        socket.emit("sendReceipt", { receipt, chatId });
+      }
     } catch (error) {
       console.error("Error purchasing tickets:", error);
     }
@@ -152,26 +157,27 @@ const AppBody = () => {
     null
   );
   const { address } = useAccount(); // <-- Move this outside of useEffect
+  const [socket, setSocket] = useState<any>(null);
 
   useEffect(() => {
     // Connect to the server
-    const socket = io("http://localhost:4000");
+    const newSocket = io("http://localhost:4000");
+    setSocket(newSocket);
     const chatID = window.location.pathname.split("/")[1];
     console.log("Emitting setChatId with chatId:", chatID);
-    socket.emit("setChatId", chatID);
+    newSocket.emit("setChatId", chatID);
 
     // Listen for the buyTicketRequest event from the server
-    socket.on("buyTicketRequest", async (data) => {
-      // <-- Add async here
+    newSocket.on("buyTicketRequest", async (data) => {
       console.log("Received buyTicketRequest:", data);
       setTicketRequest(data);
 
       if (address) {
-        // 调用 buyTickets 函数执行购买
         await buyTickets(
           parseInt(data.lotteryId),
           parseInt(data.numberOfTickets),
-          address
+          address,
+          newSocket
         );
       } else {
         console.error("No connected wallet address found.");
@@ -180,9 +186,9 @@ const AppBody = () => {
 
     // Clean up the socket connection when the component is unmounted
     return () => {
-      socket.disconnect();
+      newSocket.disconnect();
     };
-  }, [address]); // <-- Add address as a dependency
+  }, []); // <-- Empty dependency array
 
   return (
     <ConnectKitProvider>

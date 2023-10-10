@@ -46,6 +46,20 @@ io.on("connection", (socket) => {
     activeSockets[chatId] = socket;
   });
 
+  socket.on("sendReceipt", async (data) => {
+    const receipt = data.receipt;
+    const chatID = data.chatId;
+
+    try {
+      await bot.telegram.sendMessage(
+        chatID,
+        `Purchase Successful! Here's your transaction receipt:\nTransaction Hash: ${receipt.transactionHash}\nBlock Number: ${receipt.blockNumber}\n...` // 根据需要添加更多的收据详情
+      );
+    } catch (error) {
+      console.error("Error sending receipt to Telegram:", error);
+    }
+  });
+
   socket.on("disconnect", () => {
     console.log("A user disconnected");
     // 删除这个 socket 从 activeSockets 对象
