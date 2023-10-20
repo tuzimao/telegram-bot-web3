@@ -4,14 +4,14 @@ import { ethers } from "hardhat";
 async function main() {
   const [sender] = await ethers.getSigners();
 
-  const lotteryManagerAddress = "0xce617a0Bc3a26A5F880AADEB70A6390CDb8fBfC4";
+  const lotteryManagerAddress = "0xdcF6eF9fd2FcfE2125f23F6Fc0280fDfb9F9A819";
   const LotteryManager = await ethers.getContractAt(
-    "LotteryManager",
+    "LotteryManagerV2",
     lotteryManagerAddress
   );
 
   const lotteryId = 1;
-  const numberOfTickets = BigInt(5);
+  const numberOfTickets = BigInt(1);
   const ticketPrice = ethers.parseEther("0.0001");
   const totalCost = ticketPrice * numberOfTickets;
 

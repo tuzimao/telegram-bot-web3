@@ -110,9 +110,57 @@
   },
   {
     "inputs": [],
+    "name": "getClosedLotteriesDetails",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "lotteryIds",
+        "type": "uint256[]"
+      },
+      { "internalType": "address[]", "name": "winners", "type": "address[]" },
+      {
+        "internalType": "address[][]",
+        "name": "participants",
+        "type": "address[][]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "getOpenLotteries",
     "outputs": [
       { "internalType": "uint256[]", "name": "", "type": "uint256[]" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "lotteryId", "type": "uint256" }
+    ],
+    "name": "getRemainingTicketsForLottery",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "user", "type": "address" }
+    ],
+    "name": "getTicketsBoughtByUser",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "lotteryIds",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "ticketCounts",
+        "type": "uint256[]"
+      }
     ],
     "stateMutability": "view",
     "type": "function"
@@ -124,7 +172,8 @@
       { "internalType": "address", "name": "nftContract", "type": "address" },
       { "internalType": "uint256", "name": "tokenId", "type": "uint256" },
       { "internalType": "address", "name": "sender", "type": "address" },
-      { "internalType": "bool", "name": "isOpen", "type": "bool" }
+      { "internalType": "bool", "name": "isOpen", "type": "bool" },
+      { "internalType": "address", "name": "winner", "type": "address" }
     ],
     "stateMutability": "view",
     "type": "function"
@@ -139,6 +188,16 @@
     "name": "onERC721Received",
     "outputs": [{ "internalType": "bytes4", "name": "", "type": "bytes4" }],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "", "type": "uint256" },
+      { "internalType": "address", "name": "", "type": "address" }
+    ],
+    "name": "ticketsBoughtByUser",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
     "type": "function"
   },
   {

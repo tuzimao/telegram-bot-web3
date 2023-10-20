@@ -16,7 +16,7 @@ import {
 } from "connectkit";
 import { useAccount } from "wagmi";
 import { sendAddressToServer } from "./getWalletAddressAPI";
-import LotteryManagerABI from "./LotteryManagerABI.json";
+import LotteryManagerABI from "./LotteryManagerV2ABI.json";
 import io from "socket.io-client";
 import { Wallet, ethers } from "ethers";
 interface TicketRequest {
@@ -53,7 +53,7 @@ const web3 = new Web3(
 );
 const abi = LotteryManagerABI;
 
-const contractAddress = "0xce617a0Bc3a26A5F880AADEB70A6390CDb8fBfC4";
+const contractAddress = "0xdcF6eF9fd2FcfE2125f23F6Fc0280fDfb9F9A819";
 const contract = new web3.eth.Contract(abi, contractAddress);
 
 const connectToBlockchain = async () => {

@@ -3,7 +3,7 @@
 import { ethers } from "hardhat";
 
 async function main() {
-  const SimpleNFTFactory = await ethers.getContractFactory("SimpleNFT");
+  const SimpleNFTFactory = await ethers.getContractFactory("LotteryManagerV2");
 
   console.log("Deploying SimpleNFT...");
   const simpleNFT = await SimpleNFTFactory.deploy();

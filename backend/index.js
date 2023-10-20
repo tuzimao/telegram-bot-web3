@@ -44,7 +44,7 @@ var dotenv = require("dotenv");
 var http = require("http");
 var socketIo = require("socket.io");
 var Web3 = require("web3");
-var LotteryManagerABI = require("./LotteryManagerABI.json");
+var LotteryManagerABI = require("./LotteryManagerV2ABI.json");
 dotenv.config();
 var app = express();
 app.use(cors({
@@ -110,7 +110,7 @@ if (!BOT_TOKEN) {
 function initializeWeb3Contract() {
     var web3 = new Web3(new Web3.providers.HttpProvider("https://sepolia.infura.io/v3/73d62d6d12454a5d8866f12d641e9dc5"));
     var abi = LotteryManagerABI;
-    var contractAddress = "0xce617a0Bc3a26A5F880AADEB70A6390CDb8fBfC4";
+    var contractAddress = "0xdcF6eF9fd2FcfE2125f23F6Fc0280fDfb9F9A819";
     var contract = new web3.eth.Contract(abi, contractAddress);
     return { web3: web3, contract: contract };
 }
@@ -138,6 +138,36 @@ function displayOpenLotteries(ctx) {
                 case 3:
                     error_2 = _a.sent();
                     ctx.reply("Error fetching open lotteries. Please try again later.");
+                    return [3 /*break*/, 4];
+                case 4: return [2 /*return*/];
+            }
+        });
+    });
+}
+function displayClosedLotteries(ctx) {
+    return __awaiter(this, void 0, void 0, function () {
+        var response, data, closedLotteries, details, error_3;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    _a.trys.push([0, 3, , 4]);
+                    return [4 /*yield*/, fetch("http://localhost:4000/view_closed_lotteries")];
+                case 1:
+                    response = _a.sent();
+                    return [4 /*yield*/, response.json()];
+                case 2:
+                    data = _a.sent();
+                    closedLotteries = data.closedLotteries;
+                    details = closedLotteries
+                        .map(function (lottery) {
+                        return "Lottery ".concat(lottery.id, ": Winner - ").concat(lottery.winner);
+                    })
+                        .join("\n");
+                    ctx.reply(details);
+                    return [3 /*break*/, 4];
+                case 3:
+                    error_3 = _a.sent();
+                    ctx.reply("Error fetching lottery winners. Please try again later.");
                     return [3 /*break*/, 4];
                 case 4: return [2 /*return*/];
             }
@@ -191,6 +221,18 @@ bot.action("view_open_lottery", function (ctx) { return __awaiter(void 0, void 0
                 // 这里你可以写代码来处理 "View Open Lottery" 的逻辑
                 ctx.answerCbQuery("Fetching open lotteries..."); // 这只是一个示例回复
                 return [4 /*yield*/, displayOpenLotteries(ctx)];
+            case 1:
+                _a.sent();
+                return [2 /*return*/];
+        }
+    });
+}); });
+bot.action("view_closed_lottery", function (ctx) { return __awaiter(void 0, void 0, void 0, function () {
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                ctx.answerCbQuery("Fetching closed lotteries..."); // 这只是一个示例回复
+                return [4 /*yield*/, displayClosedLotteries(ctx)];
             case 1:
                 _a.sent();
                 return [2 /*return*/];
@@ -290,7 +332,7 @@ bot.action("transfer_nft", function (ctx) {
     ctx.answerCbQuery("Transferring your NFT into the pool..."); // 这只是一个示例回复
 });
 app.post("/wallet-address", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var walletAddress, chatID, error_3;
+    var walletAddress, chatID, error_4;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -321,8 +363,8 @@ app.post("/wallet-address", function (req, res) { return __awaiter(void 0, void 
                 res.status(200).send({ message: "Address received and sent to Telegram!" });
                 return [3 /*break*/, 5];
             case 4:
-                error_3 = _a.sent();
-                console.error("Error sending message to Telegram:", error_3);
+                error_4 = _a.sent();
+                console.error("Error sending message to Telegram:", error_4);
                 res.status(500).send({ message: "Failed to send message to Telegram." });
                 return [3 /*break*/, 5];
             case 5: return [2 /*return*/];
@@ -330,7 +372,7 @@ app.post("/wallet-address", function (req, res) { return __awaiter(void 0, void 
     });
 }); });
 app.get("/view_open_lottery", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var contract, openLotteries, error_4;
+    var contract, openLotteries, error_5;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -343,9 +385,41 @@ app.get("/view_open_lottery", function (req, res) { return __awaiter(void 0, voi
                 res.status(200).json({ openLotteries: openLotteries });
                 return [3 /*break*/, 3];
             case 2:
-                error_4 = _a.sent();
-                console.error("Error fetching open lotteries:", error_4);
+                error_5 = _a.sent();
+                console.error("Error fetching open lotteries:", error_5);
                 res.status(500).send({ message: "Failed to fetch open lotteries." });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+app.get("/view_closed_lotteries", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
+    var contract, closedLotteriesDetails_1, closedLotteries, error_6;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 2, , 3]);
+                contract = initializeWeb3Contract().contract;
+                return [4 /*yield*/, contract.methods
+                        .getClosedLotteriesDetails()
+                        .call()];
+            case 1:
+                closedLotteriesDetails_1 = _a.sent();
+                closedLotteries = closedLotteriesDetails_1[0].map(function (id, index) {
+                    return {
+                        id: id,
+                        winner: closedLotteriesDetails_1[1][index],
+                        participants: closedLotteriesDetails_1[2][index]
+                    };
+                });
+                res.status(200).json({ closedLotteries: closedLotteries });
+                return [3 /*break*/, 3];
+            case 2:
+                error_6 = _a.sent();
+                console.error("Error fetching closed lotteries details:", error_6.message);
+                res
+                    .status(500)
+                    .send({ message: "Failed to fetch closed lotteries details." });
                 return [3 /*break*/, 3];
             case 3: return [2 /*return*/];
         }

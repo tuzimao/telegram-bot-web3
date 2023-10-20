@@ -12,7 +12,8 @@ declare module "telegraf" {
 }
 
 const Web3 = require("web3");
-const LotteryManagerABI = require("./LotteryManagerABI.json");
+const LotteryManagerABI = require("./LotteryManagerV2ABI.json");
+const userWallets: { [chatId: string]: string } = {};
 
 dotenv.config();
 
@@ -84,7 +85,7 @@ function initializeWeb3Contract() {
   );
 
   const abi = LotteryManagerABI;
-  const contractAddress = "0xce617a0Bc3a26A5F880AADEB70A6390CDb8fBfC4";
+  const contractAddress = "0xdcF6eF9fd2FcfE2125f23F6Fc0280fDfb9F9A819";
   const contract = new web3.eth.Contract(abi, contractAddress);
 
   return { web3, contract };
@@ -104,13 +105,31 @@ async function displayOpenLotteries(ctx: any) {
         ),
       ];
     });
-
     ctx.reply(
       `Open Lotteries: ${openLotteries}`,
       Markup.inlineKeyboard(buttons)
     );
   } catch (error) {
     ctx.reply("Error fetching open lotteries. Please try again later.");
+  }
+}
+
+async function displayClosedLotteries(ctx: any) {
+  try {
+    const response = await fetch("http://localhost:4000/view_closed_lotteries");
+    const data = await response.json();
+    const closedLotteries = data.closedLotteries;
+
+    // 格式化彩票详情以供显示
+    const details = closedLotteries
+      .map((lottery) => {
+        return `Lottery ${lottery.id}: Winner - ${lottery.winner}`;
+      })
+      .join("\n");
+
+    ctx.reply(details);
+  } catch (error) {
+    ctx.reply("Error fetching lottery winners. Please try again later.");
   }
 }
 
@@ -172,6 +191,11 @@ bot.action("view_open_lottery", async (ctx) => {
   ctx.answerCbQuery("Fetching open lotteries..."); // 这只是一个示例回复
   await displayOpenLotteries(ctx);
 });
+bot.action("view_closed_lottery", async (ctx) => {
+  ctx.answerCbQuery("Fetching closed lotteries..."); // 这只是一个示例回复
+  await displayClosedLotteries(ctx);
+});
+
 const userQueries: { [key: string]: { type: string; lotteryId: string } } = {};
 bot.action(/buy_ticket_(\d+)/, async (ctx) => {
   const lotteryId = ctx.match![1];
@@ -266,6 +290,8 @@ app.post("/wallet-address", async (req, res) => {
   const walletAddress = req.body.walletAddress;
   const chatID = req.body.chatID;
 
+  userWallets[chatID] = walletAddress;
+
   try {
     await bot.telegram.sendMessage(
       chatID,
@@ -313,6 +339,31 @@ app.get("/view_open_lottery", async (req, res) => {
   } catch (error) {
     console.error("Error fetching open lotteries:", error);
     res.status(500).send({ message: "Failed to fetch open lotteries." });
+  }
+});
+
+app.get("/view_closed_lotteries", async (req, res) => {
+  try {
+    const { contract } = initializeWeb3Contract();
+    const closedLotteriesDetails = await contract.methods
+      .getClosedLotteriesDetails()
+      .call();
+    // 解析返回的数据
+    const closedLotteries = closedLotteriesDetails[0].map(
+      (id: any, index: number) => {
+        return {
+          id,
+          winner: closedLotteriesDetails[1][index],
+          participants: closedLotteriesDetails[2][index],
+        };
+      }
+    );
+    res.status(200).json({ closedLotteries });
+  } catch (error) {
+    console.error("Error fetching closed lotteries details:", error.message);
+    res
+      .status(500)
+      .send({ message: "Failed to fetch closed lotteries details." });
   }
 });
 
