@@ -133,6 +133,33 @@ async function displayClosedLotteries(ctx: any) {
   }
 }
 
+async function displayMyTicket(ctx: any) {
+  try {
+    const chatID =
+      ctx.message?.chat.id.toString() ||
+      ctx.update.callback_query?.message?.chat.id.toString();
+
+    const response = await fetch(
+      `http://localhost:4000/view_my_ticket?chatID=${chatID}`
+    );
+    const data = await response.json();
+    const myTicket = data.myTicket;
+
+    if (myTicket && myTicket.lotteryIds.length > 0) {
+      let message = "Your Tickets:\n";
+      for (let i = 0; i < myTicket.lotteryIds.length; i++) {
+        message += `Lottery ${myTicket.lotteryIds[i]}: ${myTicket.ticketCounts[i]} tickets\n`;
+      }
+      ctx.reply(message);
+    } else {
+      ctx.reply("You haven't bought any tickets yet.");
+    }
+  } catch (error) {
+    console.error("Error fetching user's tickets:", error);
+    ctx.reply("Error fetching your tickets. Please try again later.");
+  }
+}
+
 const bot = new Telegraf(BOT_TOKEN);
 bot.use(Telegraf.log());
 
@@ -194,6 +221,10 @@ bot.action("view_open_lottery", async (ctx) => {
 bot.action("view_closed_lottery", async (ctx) => {
   ctx.answerCbQuery("Fetching closed lotteries..."); // 这只是一个示例回复
   await displayClosedLotteries(ctx);
+});
+bot.action("view_my_ticket", async (ctx) => {
+  ctx.answerCbQuery("Fetching your ticket..."); // 这只是一个示例回复
+  await displayMyTicket(ctx);
 });
 
 const userQueries: { [key: string]: { type: string; lotteryId: string } } = {};
@@ -270,11 +301,6 @@ bot.action("cancel_buy", async (ctx) => {
   // Return to the view_open_lottery level
   await ctx.reply("Purchase cancelled.");
   await displayOpenLotteries(ctx);
-});
-
-bot.action("my_ticket", (ctx) => {
-  // 这里你可以写代码来处理 "View My Lottery Ticket" 的逻辑
-  ctx.answerCbQuery("Fetching your lottery ticket..."); // 这只是一个示例回复
 });
 
 bot.action("my_balance", (ctx) => {
@@ -364,6 +390,22 @@ app.get("/view_closed_lotteries", async (req, res) => {
     res
       .status(500)
       .send({ message: "Failed to fetch closed lotteries details." });
+  }
+});
+
+app.get("/view_my_ticket", async (req, res) => {
+  try {
+    const { contract } = initializeWeb3Contract();
+    const chatID = req.query.chatID as string;
+    const walletAddress = userWallets[chatID];
+    const myTicket = await contract.methods
+      .getTicketsBoughtByUser(walletAddress)
+      .call();
+    res.status(200).json({ myTicket });
+    console.log("My Ticket:", myTicket);
+  } catch (error) {
+    console.error("Error fetching my ticket:", error.message);
+    res.status(500).send({ message: "Failed to fetch my ticket." });
   }
 });
 
