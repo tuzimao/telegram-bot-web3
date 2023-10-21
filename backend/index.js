@@ -213,6 +213,37 @@ function displayMyTicket(ctx) {
         });
     });
 }
+function displayMyBalance(ctx) {
+    var _a, _b, _c;
+    return __awaiter(this, void 0, void 0, function () {
+        var chatID, walletAddress, web3, balanceWei, balanceEth, error_5;
+        return __generator(this, function (_d) {
+            switch (_d.label) {
+                case 0:
+                    _d.trys.push([0, 2, , 3]);
+                    chatID = ((_a = ctx.message) === null || _a === void 0 ? void 0 : _a.chat.id.toString()) ||
+                        ((_c = (_b = ctx.update.callback_query) === null || _b === void 0 ? void 0 : _b.message) === null || _c === void 0 ? void 0 : _c.chat.id.toString());
+                    walletAddress = userWallets[chatID];
+                    if (!walletAddress) {
+                        return [2 /*return*/, ctx.reply("Please connect your wallet first.")];
+                    }
+                    web3 = initializeWeb3Contract().web3;
+                    return [4 /*yield*/, web3.eth.getBalance(walletAddress)];
+                case 1:
+                    balanceWei = _d.sent();
+                    balanceEth = web3.utils.fromWei(balanceWei, "ether");
+                    ctx.reply("Your current balance is: ".concat(balanceEth, " ETH"));
+                    return [3 /*break*/, 3];
+                case 2:
+                    error_5 = _d.sent();
+                    console.error("Error fetching user's balance:", error_5);
+                    ctx.reply("Error fetching your balance. Please try again later.");
+                    return [3 /*break*/, 3];
+                case 3: return [2 /*return*/];
+            }
+        });
+    });
+}
 var bot = new telegraf_1.Telegraf(BOT_TOKEN);
 bot.use(telegraf_1.Telegraf.log());
 bot.start(function (ctx) {
@@ -285,6 +316,19 @@ bot.action("view_my_ticket", function (ctx) { return __awaiter(void 0, void 0, v
                 ctx.answerCbQuery("Fetching your ticket..."); // 这只是一个示例回复
                 return [4 /*yield*/, displayMyTicket(ctx)];
             case 1:
+                _a.sent();
+                return [2 /*return*/];
+        }
+    });
+}); });
+bot.action("view_my_balance", function (ctx) { return __awaiter(void 0, void 0, void 0, function () {
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0: return [4 /*yield*/, ctx.answerCbQuery("Fetching your balance...")];
+            case 1:
+                _a.sent();
+                return [4 /*yield*/, displayMyBalance(ctx)];
+            case 2:
                 _a.sent();
                 return [2 /*return*/];
         }
@@ -370,16 +414,12 @@ bot.action("cancel_buy", function (ctx) { return __awaiter(void 0, void 0, void 
         }
     });
 }); });
-bot.action("my_balance", function (ctx) {
-    // 这里你可以写代码来处理 "View My Current Balance" 的逻辑
-    ctx.answerCbQuery("Fetching your balance..."); // 这只是一个示例回复
-});
 bot.action("transfer_nft", function (ctx) {
     // 这里你可以写代码来处理 "Transfer My NFT Into Pool" 的逻辑
     ctx.answerCbQuery("Transferring your NFT into the pool..."); // 这只是一个示例回复
 });
 app.post("/wallet-address", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var walletAddress, chatID, error_5;
+    var walletAddress, chatID, error_6;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -411,8 +451,8 @@ app.post("/wallet-address", function (req, res) { return __awaiter(void 0, void 
                 res.status(200).send({ message: "Address received and sent to Telegram!" });
                 return [3 /*break*/, 5];
             case 4:
-                error_5 = _a.sent();
-                console.error("Error sending message to Telegram:", error_5);
+                error_6 = _a.sent();
+                console.error("Error sending message to Telegram:", error_6);
                 res.status(500).send({ message: "Failed to send message to Telegram." });
                 return [3 /*break*/, 5];
             case 5: return [2 /*return*/];
@@ -420,7 +460,7 @@ app.post("/wallet-address", function (req, res) { return __awaiter(void 0, void 
     });
 }); });
 app.get("/view_open_lottery", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var contract, openLotteries, error_6;
+    var contract, openLotteries, error_7;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -433,8 +473,8 @@ app.get("/view_open_lottery", function (req, res) { return __awaiter(void 0, voi
                 res.status(200).json({ openLotteries: openLotteries });
                 return [3 /*break*/, 3];
             case 2:
-                error_6 = _a.sent();
-                console.error("Error fetching open lotteries:", error_6);
+                error_7 = _a.sent();
+                console.error("Error fetching open lotteries:", error_7);
                 res.status(500).send({ message: "Failed to fetch open lotteries." });
                 return [3 /*break*/, 3];
             case 3: return [2 /*return*/];
@@ -442,7 +482,7 @@ app.get("/view_open_lottery", function (req, res) { return __awaiter(void 0, voi
     });
 }); });
 app.get("/view_closed_lotteries", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var contract, closedLotteriesDetails_1, closedLotteries, error_7;
+    var contract, closedLotteriesDetails_1, closedLotteries, error_8;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -463,8 +503,8 @@ app.get("/view_closed_lotteries", function (req, res) { return __awaiter(void 0,
                 res.status(200).json({ closedLotteries: closedLotteries });
                 return [3 /*break*/, 3];
             case 2:
-                error_7 = _a.sent();
-                console.error("Error fetching closed lotteries details:", error_7.message);
+                error_8 = _a.sent();
+                console.error("Error fetching closed lotteries details:", error_8.message);
                 res
                     .status(500)
                     .send({ message: "Failed to fetch closed lotteries details." });
@@ -474,7 +514,7 @@ app.get("/view_closed_lotteries", function (req, res) { return __awaiter(void 0,
     });
 }); });
 app.get("/view_my_ticket", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var contract, chatID, walletAddress, myTicket, error_8;
+    var contract, chatID, walletAddress, myTicket, error_9;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -491,8 +531,8 @@ app.get("/view_my_ticket", function (req, res) { return __awaiter(void 0, void 0
                 console.log("My Ticket:", myTicket);
                 return [3 /*break*/, 3];
             case 2:
-                error_8 = _a.sent();
-                console.error("Error fetching my ticket:", error_8.message);
+                error_9 = _a.sent();
+                console.error("Error fetching my ticket:", error_9.message);
                 res.status(500).send({ message: "Failed to fetch my ticket." });
                 return [3 /*break*/, 3];
             case 3: return [2 /*return*/];

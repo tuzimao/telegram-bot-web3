@@ -159,6 +159,27 @@ async function displayMyTicket(ctx: any) {
     ctx.reply("Error fetching your tickets. Please try again later.");
   }
 }
+async function displayMyBalance(ctx: any) {
+  try {
+    const chatID =
+      ctx.message?.chat.id.toString() ||
+      ctx.update.callback_query?.message?.chat.id.toString();
+    const walletAddress = userWallets[chatID];
+
+    if (!walletAddress) {
+      return ctx.reply("Please connect your wallet first.");
+    }
+
+    const { web3 } = initializeWeb3Contract();
+    const balanceWei = await web3.eth.getBalance(walletAddress);
+    const balanceEth = web3.utils.fromWei(balanceWei, "ether");
+
+    ctx.reply(`Your current balance is: ${balanceEth} ETH`);
+  } catch (error) {
+    console.error("Error fetching user's balance:", error);
+    ctx.reply("Error fetching your balance. Please try again later.");
+  }
+}
 
 const bot = new Telegraf(BOT_TOKEN);
 bot.use(Telegraf.log());
@@ -225,6 +246,10 @@ bot.action("view_closed_lottery", async (ctx) => {
 bot.action("view_my_ticket", async (ctx) => {
   ctx.answerCbQuery("Fetching your ticket..."); // 这只是一个示例回复
   await displayMyTicket(ctx);
+});
+bot.action("view_my_balance", async (ctx) => {
+  await ctx.answerCbQuery("Fetching your balance...");
+  await displayMyBalance(ctx);
 });
 
 const userQueries: { [key: string]: { type: string; lotteryId: string } } = {};
@@ -303,10 +328,6 @@ bot.action("cancel_buy", async (ctx) => {
   await displayOpenLotteries(ctx);
 });
 
-bot.action("my_balance", (ctx) => {
-  // 这里你可以写代码来处理 "View My Current Balance" 的逻辑
-  ctx.answerCbQuery("Fetching your balance..."); // 这只是一个示例回复
-});
 bot.action("transfer_nft", (ctx) => {
   // 这里你可以写代码来处理 "Transfer My NFT Into Pool" 的逻辑
   ctx.answerCbQuery("Transferring your NFT into the pool..."); // 这只是一个示例回复
