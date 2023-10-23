@@ -91,24 +91,44 @@ function initializeWeb3Contract() {
   return { web3, contract };
 }
 
+async function sendMainMenu(ctx: any) {
+  return ctx.reply(
+    "Choose an option:",
+    Markup.inlineKeyboard([
+      [Markup.button.callback("How To Play 😎", "how_to_play")],
+      [Markup.button.callback("View Open Lottery 🔍", "view_open_lottery")],
+      [Markup.button.callback("View Lottery Winner 🔍", "view_closed_lottery")],
+      [Markup.button.callback("View My Lottery Ticket", "view_my_ticket")],
+      [Markup.button.callback("View My Current Balance", "view_my_balance")],
+      [Markup.button.callback("Transfer My NFT Into Pool", "transfer_nft_in")],
+    ])
+  );
+}
+
 async function displayOpenLotteries(ctx: any) {
   try {
     const response = await fetch("http://localhost:4000/view_open_lottery");
     const data = await response.json();
 
-    const buttons = data.map((lotteryInfo: any) => {
+    const lotteryButtons = data.map((lotteryInfo: any) => {
       return [
         Markup.button.callback(
-          `Buy Tickets for Lottery ${lotteryInfo.lotteryId} (${lotteryInfo.remainingTickets} left)`,
+          `Buy Tickets for Lottery ${lotteryInfo.lotteryId} (${lotteryInfo.remainingTickets}) left`,
           `buy_ticket_${lotteryInfo.lotteryId}`
         ),
       ];
     });
+
+    // Add the "Back To Main Menu" button
+    const backToMainMenuButton = [
+      Markup.button.callback("Back To Main Menu", "back_to_main_menu"),
+    ];
+
     ctx.reply(
       `Open Lotteries: ${data
         .map((lotteryInfo: any) => lotteryInfo.lotteryId)
         .join(", ")}`,
-      Markup.inlineKeyboard(buttons)
+      Markup.inlineKeyboard([...lotteryButtons, backToMainMenuButton])
     );
   } catch (error) {
     ctx.reply("Error fetching open lotteries. Please try again later.");
@@ -127,8 +147,11 @@ async function displayClosedLotteries(ctx: any) {
         return `Lottery ${lottery.id}: Winner - ${lottery.winner}`;
       })
       .join("\n");
+    const backToMainMenuButton = [
+      Markup.button.callback("Back To Main Menu", "back_to_main_menu"),
+    ];
 
-    ctx.reply(details);
+    ctx.reply(details, Markup.inlineKeyboard(backToMainMenuButton));
   } catch (error) {
     ctx.reply("Error fetching lottery winners. Please try again later.");
   }
@@ -145,15 +168,21 @@ async function displayMyTicket(ctx: any) {
     );
     const data = await response.json();
     const myTicket = data.myTicket;
+    const backToMainMenuButton = [
+      Markup.button.callback("Back To Main Menu", "back_to_main_menu"),
+    ];
 
     if (myTicket && myTicket.lotteryIds.length > 0) {
       let message = "Your Tickets:\n";
       for (let i = 0; i < myTicket.lotteryIds.length; i++) {
         message += `Lottery ${myTicket.lotteryIds[i]}: ${myTicket.ticketCounts[i]} tickets\n`;
       }
-      ctx.reply(message);
+      ctx.reply(message, Markup.inlineKeyboard(backToMainMenuButton));
     } else {
-      ctx.reply("You haven't bought any tickets yet.");
+      ctx.reply(
+        "You haven't bought any tickets yet.",
+        Markup.inlineKeyboard(backToMainMenuButton)
+      );
     }
   } catch (error) {
     console.error("Error fetching user's tickets:", error);
@@ -166,6 +195,9 @@ async function displayMyBalance(ctx: any) {
       ctx.message?.chat.id.toString() ||
       ctx.update.callback_query?.message?.chat.id.toString();
     const walletAddress = userWallets[chatID];
+    const backToMainMenuButton = [
+      Markup.button.callback("Back To Main Menu", "back_to_main_menu"),
+    ];
 
     if (!walletAddress) {
       return ctx.reply("Please connect your wallet first.");
@@ -175,7 +207,10 @@ async function displayMyBalance(ctx: any) {
     const balanceWei = await web3.eth.getBalance(walletAddress);
     const balanceEth = web3.utils.fromWei(balanceWei, "ether");
 
-    ctx.reply(`Your current balance is: ${balanceEth} ETH`);
+    ctx.reply(
+      `Your current balance is: ${balanceEth} ETH`,
+      Markup.inlineKeyboard(backToMainMenuButton)
+    );
   } catch (error) {
     console.error("Error fetching user's balance:", error);
     ctx.reply("Error fetching your balance. Please try again later.");
@@ -225,6 +260,11 @@ bot.use((ctx, next) => {
 
   return next();
 });
+
+bot.action("back_to_main_menu", async (ctx) => {
+  await sendMainMenu(ctx);
+});
+
 bot.action("how_to_play", (ctx) => {
   // 这里你可以写代码来处理 "How To Play" 的逻辑
   ctx.answerCbQuery("Fetching how to play..."); // 这只是一个示例回复
@@ -346,28 +386,10 @@ app.post("/wallet-address", async (req, res) => {
       `Congrets! Your Wallet Are Securely Connected!`
     );
 
-    await bot.telegram.sendMessage(
-      chatID,
-      "Choose an option:",
-      Markup.inlineKeyboard([
-        [Markup.button.callback("How To Play 😎", "how_to_play")],
-        [Markup.button.callback("View Open Lottery 🔍", "view_open_lottery")],
-        [
-          Markup.button.callback(
-            "View Lottery Winner 🔍",
-            "view_closed_lottery"
-          ),
-        ],
-        [Markup.button.callback("View My Lottery Ticket", "view_my_ticket")],
-        [Markup.button.callback("View My Current Balance", "view_my_balance")],
-        [
-          Markup.button.callback(
-            "Transfer My NFT Into Pool",
-            "transfer_nft_in"
-          ),
-        ],
-      ])
-    );
+    await sendMainMenu({
+      reply: (text: string, markup: any) =>
+        bot.telegram.sendMessage(chatID, text, markup),
+    });
 
     res.status(200).send({ message: "Address received and sent to Telegram!" });
   } catch (error) {

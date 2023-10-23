@@ -35,6 +35,15 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
 exports.__esModule = true;
 // index.ts
 var express = require("express");
@@ -115,9 +124,23 @@ function initializeWeb3Contract() {
     var contract = new web3.eth.Contract(abi, contractAddress);
     return { web3: web3, contract: contract };
 }
+function sendMainMenu(ctx) {
+    return __awaiter(this, void 0, void 0, function () {
+        return __generator(this, function (_a) {
+            return [2 /*return*/, ctx.reply("Choose an option:", telegraf_1.Markup.inlineKeyboard([
+                    [telegraf_1.Markup.button.callback("How To Play 😎", "how_to_play")],
+                    [telegraf_1.Markup.button.callback("View Open Lottery 🔍", "view_open_lottery")],
+                    [telegraf_1.Markup.button.callback("View Lottery Winner 🔍", "view_closed_lottery")],
+                    [telegraf_1.Markup.button.callback("View My Lottery Ticket", "view_my_ticket")],
+                    [telegraf_1.Markup.button.callback("View My Current Balance", "view_my_balance")],
+                    [telegraf_1.Markup.button.callback("Transfer My NFT Into Pool", "transfer_nft_in")],
+                ]))];
+        });
+    });
+}
 function displayOpenLotteries(ctx) {
     return __awaiter(this, void 0, void 0, function () {
-        var response, data, buttons, error_2;
+        var response, data, lotteryButtons, backToMainMenuButton, error_2;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -128,14 +151,17 @@ function displayOpenLotteries(ctx) {
                     return [4 /*yield*/, response.json()];
                 case 2:
                     data = _a.sent();
-                    buttons = data.map(function (lotteryInfo) {
+                    lotteryButtons = data.map(function (lotteryInfo) {
                         return [
-                            telegraf_1.Markup.button.callback("Buy Tickets for Lottery ".concat(lotteryInfo.lotteryId, " (").concat(lotteryInfo.remainingTickets, " left)"), "buy_ticket_".concat(lotteryInfo.lotteryId)),
+                            telegraf_1.Markup.button.callback("Buy Tickets for Lottery ".concat(lotteryInfo.lotteryId, " - ").concat(lotteryInfo.remainingTickets, " tickets left"), "buy_ticket_".concat(lotteryInfo.lotteryId)),
                         ];
                     });
+                    backToMainMenuButton = [
+                        telegraf_1.Markup.button.callback("Back To Main Menu", "back_to_main_menu"),
+                    ];
                     ctx.reply("Open Lotteries: ".concat(data
                         .map(function (lotteryInfo) { return lotteryInfo.lotteryId; })
-                        .join(", ")), telegraf_1.Markup.inlineKeyboard(buttons));
+                        .join(", ")), telegraf_1.Markup.inlineKeyboard(__spreadArray(__spreadArray([], lotteryButtons, true), [backToMainMenuButton], false)));
                     return [3 /*break*/, 4];
                 case 3:
                     error_2 = _a.sent();
@@ -148,7 +174,7 @@ function displayOpenLotteries(ctx) {
 }
 function displayClosedLotteries(ctx) {
     return __awaiter(this, void 0, void 0, function () {
-        var response, data, closedLotteries, details, error_3;
+        var response, data, closedLotteries, details, backToMainMenuButton, error_3;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -165,7 +191,10 @@ function displayClosedLotteries(ctx) {
                         return "Lottery ".concat(lottery.id, ": Winner - ").concat(lottery.winner);
                     })
                         .join("\n");
-                    ctx.reply(details);
+                    backToMainMenuButton = [
+                        telegraf_1.Markup.button.callback("Back To Main Menu", "back_to_main_menu"),
+                    ];
+                    ctx.reply(details, telegraf_1.Markup.inlineKeyboard(backToMainMenuButton));
                     return [3 /*break*/, 4];
                 case 3:
                     error_3 = _a.sent();
@@ -179,7 +208,7 @@ function displayClosedLotteries(ctx) {
 function displayMyTicket(ctx) {
     var _a, _b, _c;
     return __awaiter(this, void 0, void 0, function () {
-        var chatID, response, data, myTicket, message, i, error_4;
+        var chatID, response, data, myTicket, backToMainMenuButton, message, i, error_4;
         return __generator(this, function (_d) {
             switch (_d.label) {
                 case 0:
@@ -193,15 +222,18 @@ function displayMyTicket(ctx) {
                 case 2:
                     data = _d.sent();
                     myTicket = data.myTicket;
+                    backToMainMenuButton = [
+                        telegraf_1.Markup.button.callback("Back To Main Menu", "back_to_main_menu"),
+                    ];
                     if (myTicket && myTicket.lotteryIds.length > 0) {
                         message = "Your Tickets:\n";
                         for (i = 0; i < myTicket.lotteryIds.length; i++) {
                             message += "Lottery ".concat(myTicket.lotteryIds[i], ": ").concat(myTicket.ticketCounts[i], " tickets\n");
                         }
-                        ctx.reply(message);
+                        ctx.reply(message, telegraf_1.Markup.inlineKeyboard(backToMainMenuButton));
                     }
                     else {
-                        ctx.reply("You haven't bought any tickets yet.");
+                        ctx.reply("You haven't bought any tickets yet.", telegraf_1.Markup.inlineKeyboard(backToMainMenuButton));
                     }
                     return [3 /*break*/, 4];
                 case 3:
@@ -217,7 +249,7 @@ function displayMyTicket(ctx) {
 function displayMyBalance(ctx) {
     var _a, _b, _c;
     return __awaiter(this, void 0, void 0, function () {
-        var chatID, walletAddress, web3, balanceWei, balanceEth, error_5;
+        var chatID, walletAddress, backToMainMenuButton, web3, balanceWei, balanceEth, error_5;
         return __generator(this, function (_d) {
             switch (_d.label) {
                 case 0:
@@ -225,6 +257,9 @@ function displayMyBalance(ctx) {
                     chatID = ((_a = ctx.message) === null || _a === void 0 ? void 0 : _a.chat.id.toString()) ||
                         ((_c = (_b = ctx.update.callback_query) === null || _b === void 0 ? void 0 : _b.message) === null || _c === void 0 ? void 0 : _c.chat.id.toString());
                     walletAddress = userWallets[chatID];
+                    backToMainMenuButton = [
+                        telegraf_1.Markup.button.callback("Back To Main Menu", "back_to_main_menu"),
+                    ];
                     if (!walletAddress) {
                         return [2 /*return*/, ctx.reply("Please connect your wallet first.")];
                     }
@@ -233,7 +268,7 @@ function displayMyBalance(ctx) {
                 case 1:
                     balanceWei = _d.sent();
                     balanceEth = web3.utils.fromWei(balanceWei, "ether");
-                    ctx.reply("Your current balance is: ".concat(balanceEth, " ETH"));
+                    ctx.reply("Your current balance is: ".concat(balanceEth, " ETH"), telegraf_1.Markup.inlineKeyboard(backToMainMenuButton));
                     return [3 /*break*/, 3];
                 case 2:
                     error_5 = _d.sent();
@@ -280,6 +315,16 @@ bot.use(function (ctx, next) {
     // }
     return next();
 });
+bot.action("back_to_main_menu", function (ctx) { return __awaiter(void 0, void 0, void 0, function () {
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0: return [4 /*yield*/, sendMainMenu(ctx)];
+            case 1:
+                _a.sent();
+                return [2 /*return*/];
+        }
+    });
+}); });
 bot.action("how_to_play", function (ctx) {
     // 这里你可以写代码来处理 "How To Play" 的逻辑
     ctx.answerCbQuery("Fetching how to play..."); // 这只是一个示例回复
@@ -433,18 +478,11 @@ app.post("/wallet-address", function (req, res) { return __awaiter(void 0, void 
                 return [4 /*yield*/, bot.telegram.sendMessage(chatID, "Congrets! Your Wallet Are Securely Connected!")];
             case 2:
                 _a.sent();
-                return [4 /*yield*/, bot.telegram.sendMessage(chatID, "Choose an option:", telegraf_1.Markup.inlineKeyboard([
-                        [telegraf_1.Markup.button.callback("How To Play 😎", "how_to_play")],
-                        [telegraf_1.Markup.button.callback("View Open Lottery 🔍", "view_open_lottery")],
-                        [
-                            telegraf_1.Markup.button.callback("View Lottery Winner 🔍", "view_closed_lottery"),
-                        ],
-                        [telegraf_1.Markup.button.callback("View My Lottery Ticket", "view_my_ticket")],
-                        [telegraf_1.Markup.button.callback("View My Current Balance", "view_my_balance")],
-                        [
-                            telegraf_1.Markup.button.callback("Transfer My NFT Into Pool", "transfer_nft_in"),
-                        ],
-                    ]))];
+                return [4 /*yield*/, sendMainMenu({
+                        reply: function (text, markup) {
+                            return bot.telegram.sendMessage(chatID, text, markup);
+                        }
+                    })];
             case 3:
                 _a.sent();
                 res.status(200).send({ message: "Address received and sent to Telegram!" });
