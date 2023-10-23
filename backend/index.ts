@@ -95,18 +95,19 @@ async function displayOpenLotteries(ctx: any) {
   try {
     const response = await fetch("http://localhost:4000/view_open_lottery");
     const data = await response.json();
-    const openLotteries = data.openLotteries;
 
-    const buttons = openLotteries.map((lotteryId: number) => {
+    const buttons = data.map((lotteryInfo: any) => {
       return [
         Markup.button.callback(
-          `Buy Tickets for Lottery ${lotteryId}`,
-          `buy_ticket_${lotteryId}`
+          `Buy Tickets for Lottery ${lotteryInfo.lotteryId} (${lotteryInfo.remainingTickets} left)`,
+          `buy_ticket_${lotteryInfo.lotteryId}`
         ),
       ];
     });
     ctx.reply(
-      `Open Lotteries: ${openLotteries}`,
+      `Open Lotteries: ${data
+        .map((lotteryInfo: any) => lotteryInfo.lotteryId)
+        .join(", ")}`,
       Markup.inlineKeyboard(buttons)
     );
   } catch (error) {
@@ -345,7 +346,6 @@ app.post("/wallet-address", async (req, res) => {
       `Congrets! Your Wallet Are Securely Connected!`
     );
 
-    // 紧接着发送带有三个按钮的消息
     await bot.telegram.sendMessage(
       chatID,
       "Choose an option:",
@@ -379,10 +379,19 @@ app.post("/wallet-address", async (req, res) => {
 app.get("/view_open_lottery", async (req, res) => {
   try {
     const { contract } = initializeWeb3Contract();
-    // 获取开放的彩票
     const openLotteries = await contract.methods.getOpenLotteries().call();
-    console.log("Open Lotteries:", openLotteries);
-    res.status(200).json({ openLotteries });
+    const remainingTickets = await Promise.all(
+      openLotteries.map((lotteryId: number) =>
+        contract.methods.getRemainingTicketsForLottery(lotteryId).call()
+      )
+    );
+
+    const result = openLotteries.map((lotteryId: number, index: number) => ({
+      lotteryId,
+      remainingTickets: remainingTickets[index],
+    }));
+
+    res.status(200).json(result);
   } catch (error) {
     console.error("Error fetching open lotteries:", error);
     res.status(500).send({ message: "Failed to fetch open lotteries." });

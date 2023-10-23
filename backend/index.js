@@ -117,7 +117,7 @@ function initializeWeb3Contract() {
 }
 function displayOpenLotteries(ctx) {
     return __awaiter(this, void 0, void 0, function () {
-        var response, data, openLotteries, buttons, error_2;
+        var response, data, buttons, error_2;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -128,13 +128,14 @@ function displayOpenLotteries(ctx) {
                     return [4 /*yield*/, response.json()];
                 case 2:
                     data = _a.sent();
-                    openLotteries = data.openLotteries;
-                    buttons = openLotteries.map(function (lotteryId) {
+                    buttons = data.map(function (lotteryInfo) {
                         return [
-                            telegraf_1.Markup.button.callback("Buy Tickets for Lottery ".concat(lotteryId), "buy_ticket_".concat(lotteryId)),
+                            telegraf_1.Markup.button.callback("Buy Tickets for Lottery ".concat(lotteryInfo.lotteryId, " (").concat(lotteryInfo.remainingTickets, " left)"), "buy_ticket_".concat(lotteryInfo.lotteryId)),
                         ];
                     });
-                    ctx.reply("Open Lotteries: ".concat(openLotteries), telegraf_1.Markup.inlineKeyboard(buttons));
+                    ctx.reply("Open Lotteries: ".concat(data
+                        .map(function (lotteryInfo) { return lotteryInfo.lotteryId; })
+                        .join(", ")), telegraf_1.Markup.inlineKeyboard(buttons));
                     return [3 /*break*/, 4];
                 case 3:
                     error_2 = _a.sent();
@@ -432,7 +433,6 @@ app.post("/wallet-address", function (req, res) { return __awaiter(void 0, void 
                 return [4 /*yield*/, bot.telegram.sendMessage(chatID, "Congrets! Your Wallet Are Securely Connected!")];
             case 2:
                 _a.sent();
-                // 紧接着发送带有三个按钮的消息
                 return [4 /*yield*/, bot.telegram.sendMessage(chatID, "Choose an option:", telegraf_1.Markup.inlineKeyboard([
                         [telegraf_1.Markup.button.callback("How To Play 😎", "how_to_play")],
                         [telegraf_1.Markup.button.callback("View Open Lottery 🔍", "view_open_lottery")],
@@ -446,7 +446,6 @@ app.post("/wallet-address", function (req, res) { return __awaiter(void 0, void 
                         ],
                     ]))];
             case 3:
-                // 紧接着发送带有三个按钮的消息
                 _a.sent();
                 res.status(200).send({ message: "Address received and sent to Telegram!" });
                 return [3 /*break*/, 5];
@@ -460,24 +459,32 @@ app.post("/wallet-address", function (req, res) { return __awaiter(void 0, void 
     });
 }); });
 app.get("/view_open_lottery", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var contract, openLotteries, error_7;
+    var contract_1, openLotteries, remainingTickets_1, result, error_7;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
-                _a.trys.push([0, 2, , 3]);
-                contract = initializeWeb3Contract().contract;
-                return [4 /*yield*/, contract.methods.getOpenLotteries().call()];
+                _a.trys.push([0, 3, , 4]);
+                contract_1 = initializeWeb3Contract().contract;
+                return [4 /*yield*/, contract_1.methods.getOpenLotteries().call()];
             case 1:
                 openLotteries = _a.sent();
-                console.log("Open Lotteries:", openLotteries);
-                res.status(200).json({ openLotteries: openLotteries });
-                return [3 /*break*/, 3];
+                return [4 /*yield*/, Promise.all(openLotteries.map(function (lotteryId) {
+                        return contract_1.methods.getRemainingTicketsForLottery(lotteryId).call();
+                    }))];
             case 2:
+                remainingTickets_1 = _a.sent();
+                result = openLotteries.map(function (lotteryId, index) { return ({
+                    lotteryId: lotteryId,
+                    remainingTickets: remainingTickets_1[index]
+                }); });
+                res.status(200).json(result);
+                return [3 /*break*/, 4];
+            case 3:
                 error_7 = _a.sent();
                 console.error("Error fetching open lotteries:", error_7);
                 res.status(500).send({ message: "Failed to fetch open lotteries." });
-                return [3 /*break*/, 3];
-            case 3: return [2 /*return*/];
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
         }
     });
 }); });
