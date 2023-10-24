@@ -54,13 +54,16 @@ io.on("connection", (socket) => {
     try {
       await bot.telegram.sendMessage(
         chatID,
-        `Purchase Successful! Here's your transaction receipt:\nTransaction Hash: ${receipt.transactionHash}\nBlock Number: ${receipt.blockNumber}\n...` // 根据需要添加更多的收据详情
+        `Purchase Successful! Here's your transaction receipt:\nTransaction Hash: ${receipt.transaction}\nBlock Number: ${receipt.blockNumber}\n...`, // 根据需要添加更多的收据详情
+        Markup.inlineKeyboard([
+          [Markup.button.callback("Back To Main Menu", "back_to_main_menu")],
+        ])
       );
+      await sendMainMenu(chatID);
     } catch (error) {
       console.error("Error sending receipt to Telegram:", error);
     }
   });
-
   socket.on("disconnect", () => {
     console.log("A user disconnected");
     // 删除这个 socket 从 activeSockets 对象
@@ -266,8 +269,7 @@ bot.action("back_to_main_menu", async (ctx) => {
 });
 
 bot.action("how_to_play", (ctx) => {
-  // 这里你可以写代码来处理 "How To Play" 的逻辑
-  ctx.answerCbQuery("Fetching how to play..."); // 这只是一个示例回复
+  ctx.answerCbQuery("Fetching how to play...");
   return ctx.reply(
     `How To Play
     1. Buy a ticket for 0.0001 ETH
@@ -276,8 +278,7 @@ bot.action("how_to_play", (ctx) => {
   );
 });
 bot.action("view_open_lottery", async (ctx) => {
-  // 这里你可以写代码来处理 "View Open Lottery" 的逻辑
-  ctx.answerCbQuery("Fetching open lotteries..."); // 这只是一个示例回复
+  ctx.answerCbQuery("Fetching open lotteries...");
   await displayOpenLotteries(ctx);
 });
 bot.action("view_closed_lottery", async (ctx) => {
@@ -298,22 +299,57 @@ bot.action(/buy_ticket_(\d+)/, async (ctx) => {
   const lotteryId = ctx.match![1];
   const chatId = ctx.update.callback_query!.message!.chat.id.toString();
 
-  // Store user query
-  userQueries[chatId] = {
-    type: "buyTicket",
-    lotteryId,
-  };
+  try {
+    // Fetch all open lotteries and their remaining tickets
+    const response = await fetch("http://localhost:4000/view_open_lottery");
+    const data = await response.json();
 
-  ctx.reply(
-    `How many tickets would you like to buy for Lottery ${lotteryId}? (1 to 10)`,
-    {
-      reply_markup: {
-        keyboard: [["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"], ["10"]],
-        one_time_keyboard: true,
-        resize_keyboard: true,
-      },
+    // Find the remaining tickets for the specific lottery
+    const lotteryData = data.find((item: any) => item.lotteryId == lotteryId);
+    const remainingTickets = lotteryData ? lotteryData.remainingTickets : 10;
+
+    // Create a dynamic keyboard based on the remaining tickets
+    const maxRows = Math.ceil(remainingTickets / 3);
+    const keyboard: string[][] = [];
+    let counter = 1;
+    for (let i = 0; i < maxRows; i++) {
+      const row: string[] = [];
+      for (let j = 0; j < 3; j++) {
+        if (counter <= remainingTickets) {
+          row.push(String(counter));
+          counter++;
+        }
+      }
+      keyboard.push(row);
     }
-  );
+
+    // Store user query
+    userQueries[chatId] = {
+      type: "buyTicket",
+      lotteryId,
+    };
+
+    keyboard.push(["Cancel"]);
+    ctx.reply(
+      `How many tickets would you like to buy for Lottery ${lotteryId}? (1 to ${remainingTickets})`,
+      {
+        reply_markup: {
+          keyboard: keyboard,
+          one_time_keyboard: true,
+          resize_keyboard: true,
+        },
+      }
+    );
+  } catch (error) {
+    console.error("Error fetching remaining tickets:", error);
+    ctx.reply("Error fetching remaining tickets. Please try again later.");
+  }
+});
+
+bot.hears("Cancel", async (ctx) => {
+  // Handle the cancellation here
+  await ctx.reply("Purchase cancelled.");
+  await displayOpenLotteries(ctx);
 });
 
 bot.on("text", async (ctx) => {
