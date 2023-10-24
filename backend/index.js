@@ -649,7 +649,7 @@ server.listen(4000, function () {
         .on("error", console.error);
     function handleLotteryClosed(returnValues) {
         return __awaiter(this, void 0, void 0, function () {
-            var lotteryId, winner, response, data, closedLottery, participants, _loop_1, _i, participants_1, participant, error_11;
+            var lotteryId, winner, response, data, closedLottery, participants, notifiedChatIDs, _loop_1, _i, participants_1, participant, error_11;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -666,16 +666,18 @@ server.listen(4000, function () {
                         data = _a.sent();
                         closedLottery = data.closedLotteries.find(function (lottery) { return lottery.id == lotteryId; });
                         participants = closedLottery ? closedLottery.participants : [];
+                        notifiedChatIDs = new Set();
                         _loop_1 = function (participant) {
                             var chatID;
                             return __generator(this, function (_b) {
                                 switch (_b.label) {
                                     case 0:
                                         chatID = Object.keys(userWallets).find(function (key) { return userWallets[key] === participant; });
-                                        if (!chatID) return [3 /*break*/, 2];
+                                        if (!(chatID && !notifiedChatIDs.has(chatID))) return [3 /*break*/, 2];
                                         return [4 /*yield*/, bot.telegram.sendMessage(chatID, "Lottery ".concat(lotteryId, " has ended! The winner is ").concat(winner, "."))];
                                     case 1:
                                         _b.sent();
+                                        notifiedChatIDs.add(chatID);
                                         _b.label = 2;
                                     case 2: return [2 /*return*/];
                                 }

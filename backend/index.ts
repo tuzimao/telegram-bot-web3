@@ -522,15 +522,19 @@ server.listen(4000, () => {
       );
       const participants = closedLottery ? closedLottery.participants : [];
 
+      const notifiedChatIDs = new Set<string>();
+
       for (let participant of participants) {
         const chatID = Object.keys(userWallets).find(
           (key) => userWallets[key] === participant
         );
-        if (chatID) {
+
+        if (chatID && !notifiedChatIDs.has(chatID)) {
           await bot.telegram.sendMessage(
             chatID,
             `Lottery ${lotteryId} has ended! The winner is ${winner}.`
           );
+          notifiedChatIDs.add(chatID);
         }
       }
     } catch (error) {
