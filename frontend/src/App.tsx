@@ -82,6 +82,7 @@ const connectToBlockchain = async () => {
 
 // for information about user account
 const WalletStatus = () => {
+  console.log("WalletStatus rendered"); // <-- 渲染日志
   const {
     address: walletAddress,
     isConnecting: walletIsConnecting,
@@ -90,6 +91,7 @@ const WalletStatus = () => {
   const chatID = window.location.pathname.split("/")[1];
 
   useEffect(() => {
+    console.log("WalletStatus useEffect (connection)"); // <-- useEffect日志
     if ((window as any).ethereum) {
       (window as any).ethereum.request({ method: "eth_requestAccounts" });
     }
@@ -97,6 +99,7 @@ const WalletStatus = () => {
   }, []);
 
   useEffect(() => {
+    console.log("WalletStatus useEffect (connection)"); // <-- useEffect日志
     if (walletAddress) {
       sendAddressToServer(walletAddress, chatID);
     }
@@ -153,6 +156,7 @@ const buyTickets = async (
 };
 
 const AppBody = () => {
+  console.log("AppBody rendered"); // <-- 渲染日志
   const [ticketRequest, setTicketRequest] = useState<TicketRequest | null>(
     null
   );
@@ -160,6 +164,7 @@ const AppBody = () => {
   const [socket, setSocket] = useState<any>(null);
 
   useEffect(() => {
+    console.log("AppBody useEffect"); // <-- useEffect日志
     // Connect to the server
     const newSocket = io("http://localhost:4000");
     setSocket(newSocket);
