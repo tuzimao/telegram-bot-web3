@@ -82,8 +82,8 @@ if (!BOT_TOKEN) {
 
 function initializeWeb3Contract() {
   const web3 = new Web3(
-    new Web3.providers.HttpProvider(
-      "https://sepolia.infura.io/v3/73d62d6d12454a5d8866f12d641e9dc5"
+    new Web3.providers.WebsocketProvider(
+      "wss://sepolia.infura.io/ws/v3/73d62d6d12454a5d8866f12d641e9dc5"
     )
   );
 
@@ -500,4 +500,41 @@ app.get("/view_my_ticket", async (req, res) => {
 bot.launch();
 server.listen(4000, () => {
   console.log("Server is running on http://localhost:4000");
+  const { web3, contract } = initializeWeb3Contract();
+
+  contract.events
+    .LotteryClosed({})
+    .on("data", (event: any) => {
+      handleLotteryClosed(event.returnValues);
+    })
+    .on("error", console.error);
+  async function handleLotteryClosed(returnValues: any) {
+    const lotteryId = returnValues.lotteryId;
+    const winner = returnValues.winner;
+
+    try {
+      const response = await fetch(
+        `http://localhost:4000/view_closed_lotteries`
+      );
+      const data = await response.json();
+      const closedLottery = data.closedLotteries.find(
+        (lottery: any) => lottery.id == lotteryId
+      );
+      const participants = closedLottery ? closedLottery.participants : [];
+
+      for (let participant of participants) {
+        const chatID = Object.keys(userWallets).find(
+          (key) => userWallets[key] === participant
+        );
+        if (chatID) {
+          await bot.telegram.sendMessage(
+            chatID,
+            `Lottery ${lotteryId} has ended! The winner is ${winner}.`
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Error sending lottery closed notifications:", error);
+    }
+  }
 });

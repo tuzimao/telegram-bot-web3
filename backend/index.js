@@ -123,7 +123,7 @@ if (!BOT_TOKEN) {
     throw new Error("TELEGRAM_BOT_TOKEN is not set in .env file");
 }
 function initializeWeb3Contract() {
-    var web3 = new Web3(new Web3.providers.HttpProvider("https://sepolia.infura.io/v3/73d62d6d12454a5d8866f12d641e9dc5"));
+    var web3 = new Web3(new Web3.providers.WebsocketProvider("wss://sepolia.infura.io/ws/v3/73d62d6d12454a5d8866f12d641e9dc5"));
     var abi = LotteryManagerABI;
     var contractAddress = "0xdcF6eF9fd2FcfE2125f23F6Fc0280fDfb9F9A819";
     var contract = new web3.eth.Contract(abi, contractAddress);
@@ -640,4 +640,67 @@ app.get("/view_my_ticket", function (req, res) { return __awaiter(void 0, void 0
 bot.launch();
 server.listen(4000, function () {
     console.log("Server is running on http://localhost:4000");
+    var _a = initializeWeb3Contract(), web3 = _a.web3, contract = _a.contract;
+    contract.events
+        .LotteryClosed({})
+        .on("data", function (event) {
+        handleLotteryClosed(event.returnValues);
+    })
+        .on("error", console.error);
+    function handleLotteryClosed(returnValues) {
+        return __awaiter(this, void 0, void 0, function () {
+            var lotteryId, winner, response, data, closedLottery, participants, _loop_1, _i, participants_1, participant, error_11;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        lotteryId = returnValues.lotteryId;
+                        winner = returnValues.winner;
+                        _a.label = 1;
+                    case 1:
+                        _a.trys.push([1, 8, , 9]);
+                        return [4 /*yield*/, fetch("http://localhost:4000/view_closed_lotteries")];
+                    case 2:
+                        response = _a.sent();
+                        return [4 /*yield*/, response.json()];
+                    case 3:
+                        data = _a.sent();
+                        closedLottery = data.closedLotteries.find(function (lottery) { return lottery.id == lotteryId; });
+                        participants = closedLottery ? closedLottery.participants : [];
+                        _loop_1 = function (participant) {
+                            var chatID;
+                            return __generator(this, function (_b) {
+                                switch (_b.label) {
+                                    case 0:
+                                        chatID = Object.keys(userWallets).find(function (key) { return userWallets[key] === participant; });
+                                        if (!chatID) return [3 /*break*/, 2];
+                                        return [4 /*yield*/, bot.telegram.sendMessage(chatID, "Lottery ".concat(lotteryId, " has ended! The winner is ").concat(winner, "."))];
+                                    case 1:
+                                        _b.sent();
+                                        _b.label = 2;
+                                    case 2: return [2 /*return*/];
+                                }
+                            });
+                        };
+                        _i = 0, participants_1 = participants;
+                        _a.label = 4;
+                    case 4:
+                        if (!(_i < participants_1.length)) return [3 /*break*/, 7];
+                        participant = participants_1[_i];
+                        return [5 /*yield**/, _loop_1(participant)];
+                    case 5:
+                        _a.sent();
+                        _a.label = 6;
+                    case 6:
+                        _i++;
+                        return [3 /*break*/, 4];
+                    case 7: return [3 /*break*/, 9];
+                    case 8:
+                        error_11 = _a.sent();
+                        console.error("Error sending lottery closed notifications:", error_11);
+                        return [3 /*break*/, 9];
+                    case 9: return [2 /*return*/];
+                }
+            });
+        });
+    }
 });
