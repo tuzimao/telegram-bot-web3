@@ -35,15 +35,6 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
-    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
-        if (ar || !(i in from)) {
-            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
-            ar[i] = from[i];
-        }
-    }
-    return to.concat(ar || Array.prototype.slice.call(from));
-};
 exports.__esModule = true;
 // index.ts
 var express = require("express");
@@ -145,62 +136,70 @@ function sendMainMenu(ctx) {
         });
     });
 }
+var apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6IjU4NDZiMmMxLWY5MWYtNDA5NC1iN2JhLWIzYTMxMWE3N2EwNSIsIm9yZ0lkIjoiMzYyMDM4IiwidXNlcklkIjoiMzcyMDc4IiwidHlwZUlkIjoiNGQ0ODBkNDQtOThlZC00NGY4LWIxMmUtMjYxYjBkNTljMDc1IiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE2OTgxMjAyMDcsImV4cCI6NDg1Mzg4MDIwN30.Wn8jrHa5oZRYfFmePC8nO0Y9Uq-csfypfxnkgMZGWbM"; // replace with your actual key
+moralis_1["default"].start({ apiKey: apiKey });
+var metadataCache = {};
 function displayOpenLotteries(ctx) {
     return __awaiter(this, void 0, void 0, function () {
-        var response, data, apiKey, message, _i, data_1, lotteryInfo, lotteryDetails, nftMetadata, lotteryButtons, backToMainMenuButton, error_2;
+        var response, data, message, lotteryButtons, _i, data_1, lotteryInfo, lotteryDetails, nftdata, error_2;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    _a.trys.push([0, 9, , 10]);
+                    _a.trys.push([0, 8, , 9]);
                     return [4 /*yield*/, fetch("http://localhost:4000/view_open_lottery")];
                 case 1:
                     response = _a.sent();
                     return [4 /*yield*/, response.json()];
                 case 2:
                     data = _a.sent();
-                    apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6IjU4NDZiMmMxLWY5MWYtNDA5NC1iN2JhLWIzYTMxMWE3N2EwNSIsIm9yZ0lkIjoiMzYyMDM4IiwidXNlcklkIjoiMzcyMDc4IiwidHlwZUlkIjoiNGQ0ODBkNDQtOThlZC00NGY4LWIxMmUtMjYxYjBkNTljMDc1IiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE2OTgxMjAyMDcsImV4cCI6NDg1Mzg4MDIwN30.Wn8jrHa5oZRYfFmePC8nO0Y9Uq-csfypfxnkgMZGWbM";
-                    return [4 /*yield*/, moralis_1["default"].start({ apiKey: apiKey })];
-                case 3:
-                    _a.sent();
                     message = "Open Lotteries:\n";
+                    lotteryButtons = [];
                     _i = 0, data_1 = data;
-                    _a.label = 4;
-                case 4:
-                    if (!(_i < data_1.length)) return [3 /*break*/, 8];
+                    _a.label = 3;
+                case 3:
+                    if (!(_i < data_1.length)) return [3 /*break*/, 7];
                     lotteryInfo = data_1[_i];
                     return [4 /*yield*/, getLotteryDetails(lotteryInfo.lotteryId)];
-                case 5:
+                case 4:
                     lotteryDetails = _a.sent();
-                    console.log("Lottery Details:", lotteryDetails.nftContract);
-                    console.log("Lottery Details:", lotteryDetails.tokenId);
                     return [4 /*yield*/, getNFTMetadata(lotteryDetails.nftContract, lotteryDetails.tokenId)];
+                case 5:
+                    nftdata = _a.sent();
+                    message += "Lottery ".concat(lotteryInfo.lotteryId, " (").concat(lotteryInfo.remainingTickets, " tickets left) - NFT: ").concat(nftdata.name, " (").concat(nftdata.symbol, ")\n");
+                    // Add a button for each lottery
+                    lotteryButtons.push([
+                        telegraf_1.Markup.button.callback("Buy Tickets for Lottery ".concat(lotteryInfo.lotteryId, " (").concat(lotteryInfo.remainingTickets, " left)"), "buy_ticket_".concat(lotteryInfo.lotteryId)),
+                    ]);
+                    // Check if NFT has metadata and add a button to view it
+                    if (nftdata.metadata && nftdata.metadata !== "No metadata") {
+                        metadataCache[lotteryInfo.lotteryId] = nftdata.metadata;
+                        lotteryButtons.push([
+                            telegraf_1.Markup.button.callback("View Metadata for Lottery ".concat(lotteryInfo.lotteryId), "view_metadata_".concat(lotteryInfo.lotteryId)),
+                        ]);
+                    }
+                    else {
+                        message += "Metadata: No metadata\n";
+                    }
+                    _a.label = 6;
                 case 6:
-                    nftMetadata = _a.sent();
-                    message += "Lottery ".concat(lotteryInfo.lotteryId, " (").concat(lotteryInfo.remainingTickets, " tickets left) - NFT: ").concat(nftMetadata.name, " (").concat(nftMetadata.description, ")\n");
-                    _a.label = 7;
-                case 7:
                     _i++;
-                    return [3 /*break*/, 4];
-                case 8:
-                    console.log("Open Lotteries:", message); ///
+                    return [3 /*break*/, 3];
+                case 7:
+                    console.log("Open Lotteries:", message);
                     ctx.reply(message);
-                    lotteryButtons = data.map(function (lotteryInfo) {
-                        return [
-                            telegraf_1.Markup.button.callback("Buy Tickets for Lottery ".concat(lotteryInfo.lotteryId, " (").concat(lotteryInfo.remainingTickets, " left)"), "buy_ticket_".concat(lotteryInfo.lotteryId)),
-                        ];
-                    });
-                    backToMainMenuButton = [
+                    // Add the "Back To Main Menu" button
+                    lotteryButtons.push([
                         telegraf_1.Markup.button.callback("Back To Main Menu", "back_to_main_menu"),
-                    ];
+                    ]);
                     ctx.reply("Open Lotteries: ".concat(data
                         .map(function (lotteryInfo) { return lotteryInfo.lotteryId; })
-                        .join(", ")), telegraf_1.Markup.inlineKeyboard(__spreadArray(__spreadArray([], lotteryButtons, true), [backToMainMenuButton], false)));
-                    return [3 /*break*/, 10];
-                case 9:
+                        .join(", ")), telegraf_1.Markup.inlineKeyboard(lotteryButtons));
+                    return [3 /*break*/, 9];
+                case 8:
                     error_2 = _a.sent();
                     ctx.reply("Error fetching open lotteries. Please try again later.");
-                    return [3 /*break*/, 10];
-                case 10: return [2 /*return*/];
+                    return [3 /*break*/, 9];
+                case 9: return [2 /*return*/];
             }
         });
     });
@@ -208,12 +207,11 @@ function displayOpenLotteries(ctx) {
 // This function fetches the metadata of an NFT from Morails
 function getNFTMetadata(nftContract, tokenId) {
     return __awaiter(this, void 0, void 0, function () {
-        var matchingNFT, chains, _i, chains_1, chain, response, NFT_tokenId, NFT_address, NFT_metadata, error_3;
+        var chains, _i, chains_1, chain, response, NFT_tokenId, NFT_address, NFT_data, error_3;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     _a.trys.push([0, 5, , 6]);
-                    matchingNFT = null;
                     chains = [common_evm_utils_1.EvmChain.SEPOLIA];
                     console.log("nftContract ::", nftContract); ///
                     _i = 0, chains_1 = chains;
@@ -233,10 +231,11 @@ function getNFTMetadata(nftContract, tokenId) {
                     NFT_address = response === null || response === void 0 ? void 0 : response.toJSON().token_address;
                     console.log("NFT_tokenId:", NFT_tokenId); ///
                     console.log("NFT_address:", NFT_address); ///
-                    NFT_metadata = response === null || response === void 0 ? void 0 : response.toJSON();
+                    NFT_data = response === null || response === void 0 ? void 0 : response.toJSON();
                     return [2 /*return*/, {
-                            name: NFT_metadata.name || "Unknown",
-                            description: NFT_metadata.symbol || "No description"
+                            name: NFT_data.name || "Unknown",
+                            symbol: NFT_data.symbol || "No description",
+                            metadata: NFT_data.metadata || "No metadata"
                         }];
                 case 3:
                     _i++;
@@ -484,6 +483,19 @@ bot.action("view_my_balance", function (ctx) { return __awaiter(void 0, void 0, 
                 _a.sent();
                 return [2 /*return*/];
         }
+    });
+}); });
+bot.action(/view_metadata_(\d+)/, function (ctx) { return __awaiter(void 0, void 0, void 0, function () {
+    var lotteryId, metadata, backToOpenLotteryButton;
+    return __generator(this, function (_a) {
+        lotteryId = ctx.match[1];
+        metadata = metadataCache[lotteryId];
+        ctx.reply("Metadata for Lottery ".concat(lotteryId, " NFT:\n\n").concat(metadata));
+        backToOpenLotteryButton = [
+            telegraf_1.Markup.button.callback("Back to view lottery", "view_open_lottery"),
+        ];
+        ctx.reply("Back", telegraf_1.Markup.inlineKeyboard(backToOpenLotteryButton));
+        return [2 /*return*/];
     });
 }); });
 var userQueries = {};

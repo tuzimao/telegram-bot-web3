@@ -109,51 +109,62 @@ async function sendMainMenu(ctx: any) {
     ])
   );
 }
+const apiKey =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6IjU4NDZiMmMxLWY5MWYtNDA5NC1iN2JhLWIzYTMxMWE3N2EwNSIsIm9yZ0lkIjoiMzYyMDM4IiwidXNlcklkIjoiMzcyMDc4IiwidHlwZUlkIjoiNGQ0ODBkNDQtOThlZC00NGY4LWIxMmUtMjYxYjBkNTljMDc1IiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE2OTgxMjAyMDcsImV4cCI6NDg1Mzg4MDIwN30.Wn8jrHa5oZRYfFmePC8nO0Y9Uq-csfypfxnkgMZGWbM"; // replace with your actual key
+Moralis.start({ apiKey });
+const metadataCache: any = {};
 async function displayOpenLotteries(ctx: any) {
   try {
     const response = await fetch("http://localhost:4000/view_open_lottery");
     const data = await response.json();
-    const apiKey = "";
-    await Moralis.start({ apiKey });
     let message = `Open Lotteries:\n`;
 
+    const lotteryButtons = []; // Moved outside the loop to collect all buttons
+
     for (let lotteryInfo of data) {
-      // Get lottery details from the contract
       const lotteryDetails = await getLotteryDetails(lotteryInfo.lotteryId);
-      console.log("Lottery Details:", lotteryDetails.nftContract);
-      console.log("Lottery Details:", lotteryDetails.tokenId);
-      // Get NFT metadata from Morails
-      const nftMetadata = await getNFTMetadata(
+      const nftdata = await getNFTMetadata(
         lotteryDetails.nftContract,
         lotteryDetails.tokenId
       );
 
-      message += `Lottery ${lotteryInfo.lotteryId} (${lotteryInfo.remainingTickets} tickets left) - NFT: ${nftMetadata.name} (${nftMetadata.description})\n`;
-    }
-    console.log("Open Lotteries:", message); ///
+      message += `Lottery ${lotteryInfo.lotteryId} (${lotteryInfo.remainingTickets} tickets left) - NFT: ${nftdata.name} (${nftdata.symbol})\n`;
 
-    ctx.reply(message);
-
-    // Then, send the buttons in a separate message
-    const lotteryButtons = data.map((lotteryInfo: any) => {
-      return [
+      // Add a button for each lottery
+      lotteryButtons.push([
         Markup.button.callback(
           `Buy Tickets for Lottery ${lotteryInfo.lotteryId} (${lotteryInfo.remainingTickets} left)`,
           `buy_ticket_${lotteryInfo.lotteryId}`
         ),
-      ];
-    });
+      ]);
+
+      // Check if NFT has metadata and add a button to view it
+      if (nftdata.metadata && nftdata.metadata !== "No metadata") {
+        metadataCache[lotteryInfo.lotteryId] = nftdata.metadata;
+        lotteryButtons.push([
+          Markup.button.callback(
+            `View Metadata for Lottery ${lotteryInfo.lotteryId}`,
+            `view_metadata_${lotteryInfo.lotteryId}`
+          ),
+        ]);
+      } else {
+        message += `Metadata: No metadata\n`;
+      }
+    }
+
+    console.log("Open Lotteries:", message);
+    ctx.reply(message);
 
     // Add the "Back To Main Menu" button
-    const backToMainMenuButton = [
+    lotteryButtons.push([
       Markup.button.callback("Back To Main Menu", "back_to_main_menu"),
-    ];
+    ]);
 
     ctx.reply(
       `Open Lotteries: ${data
         .map((lotteryInfo: any) => lotteryInfo.lotteryId)
         .join(", ")}`,
-      Markup.inlineKeyboard([...lotteryButtons, backToMainMenuButton])
+      Markup.inlineKeyboard(lotteryButtons)
     );
   } catch (error) {
     ctx.reply("Error fetching open lotteries. Please try again later.");
@@ -164,7 +175,6 @@ async function displayOpenLotteries(ctx: any) {
 
 async function getNFTMetadata(nftContract: string, tokenId: number) {
   try {
-    let matchingNFT = null;
     const chains = [EvmChain.SEPOLIA];
     console.log("nftContract ::", nftContract); ///
     for (const chain of chains) {
@@ -179,11 +189,12 @@ async function getNFTMetadata(nftContract: string, tokenId: number) {
       console.log("NFT_tokenId:", NFT_tokenId); ///
       console.log("NFT_address:", NFT_address); ///
 
-      const NFT_metadata = response?.toJSON();
+      const NFT_data = response?.toJSON();
 
       return {
-        name: NFT_metadata.name || "Unknown",
-        description: NFT_metadata.symbol || "No description",
+        name: NFT_data.name || "Unknown",
+        symbol: NFT_data.symbol || "No description",
+        metadata: NFT_data.metadata || "No metadata",
       };
     }
   } catch (error) {
@@ -362,6 +373,16 @@ bot.action("view_my_ticket", async (ctx) => {
 bot.action("view_my_balance", async (ctx) => {
   await ctx.answerCbQuery("Fetching your balance...");
   await displayMyBalance(ctx);
+});
+
+bot.action(/view_metadata_(\d+)/, async (ctx) => {
+  const lotteryId = ctx.match[1];
+  const metadata = metadataCache[lotteryId];
+  ctx.reply(`Metadata for Lottery ${lotteryId} NFT:\n\n${metadata}`);
+  const backToOpenLotteryButton = [
+    Markup.button.callback("Back to view lottery", "view_open_lottery"),
+  ];
+  ctx.reply("Back", Markup.inlineKeyboard(backToOpenLotteryButton));
 });
 
 const userQueries: { [key: string]: { type: string; lotteryId: string } } = {};
