@@ -1,0 +1,19 @@
+{
+  "name": "Mountain Majesty",
+  "description": "A breathtaking view of a mountain during sunset.",
+  "image": "ipfs://bafybeibihjizgpt6ple63pow32lpmu6pzlzd22hxhi53ay5ytajvlb224u",
+  "attributes": [
+    {
+      "trait_type": "Scene",
+      "value": "Mountain"
+    },
+    {
+      "trait_type": "Time of Day",
+      "value": "Sunset"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Rare"
+    }
+  ]
+}

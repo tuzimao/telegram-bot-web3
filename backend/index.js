@@ -52,6 +52,8 @@ var telegraf_1 = require("telegraf");
 var dotenv = require("dotenv");
 var http = require("http");
 var socketIo = require("socket.io");
+var moralis_1 = require("moralis");
+var common_evm_utils_1 = require("@moralisweb3/common-evm-utils");
 var Web3 = require("web3");
 var LotteryManagerABI = require("./LotteryManagerV2ABI.json");
 var userWallets = {};
@@ -145,20 +147,46 @@ function sendMainMenu(ctx) {
 }
 function displayOpenLotteries(ctx) {
     return __awaiter(this, void 0, void 0, function () {
-        var response, data, lotteryButtons, backToMainMenuButton, error_2;
+        var response, data, apiKey, message, _i, data_1, lotteryInfo, lotteryDetails, nftMetadata, lotteryButtons, backToMainMenuButton, error_2;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    _a.trys.push([0, 3, , 4]);
+                    _a.trys.push([0, 9, , 10]);
                     return [4 /*yield*/, fetch("http://localhost:4000/view_open_lottery")];
                 case 1:
                     response = _a.sent();
                     return [4 /*yield*/, response.json()];
                 case 2:
                     data = _a.sent();
+                    apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6IjU4NDZiMmMxLWY5MWYtNDA5NC1iN2JhLWIzYTMxMWE3N2EwNSIsIm9yZ0lkIjoiMzYyMDM4IiwidXNlcklkIjoiMzcyMDc4IiwidHlwZUlkIjoiNGQ0ODBkNDQtOThlZC00NGY4LWIxMmUtMjYxYjBkNTljMDc1IiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE2OTgxMjAyMDcsImV4cCI6NDg1Mzg4MDIwN30.Wn8jrHa5oZRYfFmePC8nO0Y9Uq-csfypfxnkgMZGWbM";
+                    return [4 /*yield*/, moralis_1["default"].start({ apiKey: apiKey })];
+                case 3:
+                    _a.sent();
+                    message = "Open Lotteries:\n";
+                    _i = 0, data_1 = data;
+                    _a.label = 4;
+                case 4:
+                    if (!(_i < data_1.length)) return [3 /*break*/, 8];
+                    lotteryInfo = data_1[_i];
+                    return [4 /*yield*/, getLotteryDetails(lotteryInfo.lotteryId)];
+                case 5:
+                    lotteryDetails = _a.sent();
+                    console.log("Lottery Details:", lotteryDetails.nftContract);
+                    console.log("Lottery Details:", lotteryDetails.tokenId);
+                    return [4 /*yield*/, getNFTMetadata(lotteryDetails.nftContract, lotteryDetails.tokenId)];
+                case 6:
+                    nftMetadata = _a.sent();
+                    message += "Lottery ".concat(lotteryInfo.lotteryId, " (").concat(lotteryInfo.remainingTickets, " tickets left) - NFT: ").concat(nftMetadata.name, " (").concat(nftMetadata.description, ")\n");
+                    _a.label = 7;
+                case 7:
+                    _i++;
+                    return [3 /*break*/, 4];
+                case 8:
+                    console.log("Open Lotteries:", message); ///
+                    ctx.reply(message);
                     lotteryButtons = data.map(function (lotteryInfo) {
                         return [
-                            telegraf_1.Markup.button.callback("Buy Tickets for Lottery ".concat(lotteryInfo.lotteryId, " (").concat(lotteryInfo.remainingTickets, ") left"), "buy_ticket_".concat(lotteryInfo.lotteryId)),
+                            telegraf_1.Markup.button.callback("Buy Tickets for Lottery ".concat(lotteryInfo.lotteryId, " (").concat(lotteryInfo.remainingTickets, " left)"), "buy_ticket_".concat(lotteryInfo.lotteryId)),
                         ];
                     });
                     backToMainMenuButton = [
@@ -167,11 +195,86 @@ function displayOpenLotteries(ctx) {
                     ctx.reply("Open Lotteries: ".concat(data
                         .map(function (lotteryInfo) { return lotteryInfo.lotteryId; })
                         .join(", ")), telegraf_1.Markup.inlineKeyboard(__spreadArray(__spreadArray([], lotteryButtons, true), [backToMainMenuButton], false)));
-                    return [3 /*break*/, 4];
-                case 3:
+                    return [3 /*break*/, 10];
+                case 9:
                     error_2 = _a.sent();
                     ctx.reply("Error fetching open lotteries. Please try again later.");
-                    return [3 /*break*/, 4];
+                    return [3 /*break*/, 10];
+                case 10: return [2 /*return*/];
+            }
+        });
+    });
+}
+// This function fetches the metadata of an NFT from Morails
+function getNFTMetadata(nftContract, tokenId) {
+    return __awaiter(this, void 0, void 0, function () {
+        var matchingNFT, chains, _i, chains_1, chain, response, NFT_tokenId, NFT_address, NFT_metadata, error_3;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    _a.trys.push([0, 5, , 6]);
+                    matchingNFT = null;
+                    chains = [common_evm_utils_1.EvmChain.SEPOLIA];
+                    console.log("nftContract ::", nftContract); ///
+                    _i = 0, chains_1 = chains;
+                    _a.label = 1;
+                case 1:
+                    if (!(_i < chains_1.length)) return [3 /*break*/, 4];
+                    chain = chains_1[_i];
+                    return [4 /*yield*/, moralis_1["default"].EvmApi.nft.getNFTMetadata({
+                            address: nftContract,
+                            chain: chain,
+                            tokenId: tokenId.toString()
+                        })];
+                case 2:
+                    response = _a.sent();
+                    console.log("NFT:", response === null || response === void 0 ? void 0 : response.toJSON()); ///
+                    NFT_tokenId = response === null || response === void 0 ? void 0 : response.toJSON().token_id;
+                    NFT_address = response === null || response === void 0 ? void 0 : response.toJSON().token_address;
+                    console.log("NFT_tokenId:", NFT_tokenId); ///
+                    console.log("NFT_address:", NFT_address); ///
+                    NFT_metadata = response === null || response === void 0 ? void 0 : response.toJSON();
+                    return [2 /*return*/, {
+                            name: NFT_metadata.name || "Unknown",
+                            description: NFT_metadata.symbol || "No description"
+                        }];
+                case 3:
+                    _i++;
+                    return [3 /*break*/, 1];
+                case 4: return [3 /*break*/, 6];
+                case 5:
+                    error_3 = _a.sent();
+                    console.error("Error fetching NFT metadata:", error_3);
+                    throw error_3;
+                case 6: return [2 /*return*/];
+            }
+        });
+    });
+}
+function getLotteryDetails(lotteryId) {
+    return __awaiter(this, void 0, void 0, function () {
+        var contract, lottery, error_4;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    contract = initializeWeb3Contract().contract;
+                    _a.label = 1;
+                case 1:
+                    _a.trys.push([1, 3, , 4]);
+                    return [4 /*yield*/, contract.methods.lotteries(lotteryId).call()];
+                case 2:
+                    lottery = _a.sent();
+                    console.log("Lottery details:", lottery); ///
+                    console.log("Lottery details:", lottery.nftContract); ///
+                    console.log("Lottery details:", lottery.tokenId); ///
+                    return [2 /*return*/, {
+                            nftContract: lottery.nftContract,
+                            tokenId: lottery.tokenId
+                        }];
+                case 3:
+                    error_4 = _a.sent();
+                    console.error("Error fetching lottery details:", error_4);
+                    throw error_4;
                 case 4: return [2 /*return*/];
             }
         });
@@ -179,7 +282,7 @@ function displayOpenLotteries(ctx) {
 }
 function displayClosedLotteries(ctx) {
     return __awaiter(this, void 0, void 0, function () {
-        var response, data, closedLotteries, details, backToMainMenuButton, error_3;
+        var response, data, closedLotteries, details, backToMainMenuButton, error_5;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -202,7 +305,7 @@ function displayClosedLotteries(ctx) {
                     ctx.reply(details, telegraf_1.Markup.inlineKeyboard(backToMainMenuButton));
                     return [3 /*break*/, 4];
                 case 3:
-                    error_3 = _a.sent();
+                    error_5 = _a.sent();
                     ctx.reply("Error fetching lottery winners. Please try again later.");
                     return [3 /*break*/, 4];
                 case 4: return [2 /*return*/];
@@ -213,7 +316,7 @@ function displayClosedLotteries(ctx) {
 function displayMyTicket(ctx) {
     var _a, _b, _c;
     return __awaiter(this, void 0, void 0, function () {
-        var chatID, response, data, myTicket, backToMainMenuButton, message, i, error_4;
+        var chatID, response, data, myTicket, backToMainMenuButton, message, i, error_6;
         return __generator(this, function (_d) {
             switch (_d.label) {
                 case 0:
@@ -242,8 +345,8 @@ function displayMyTicket(ctx) {
                     }
                     return [3 /*break*/, 4];
                 case 3:
-                    error_4 = _d.sent();
-                    console.error("Error fetching user's tickets:", error_4);
+                    error_6 = _d.sent();
+                    console.error("Error fetching user's tickets:", error_6);
                     ctx.reply("Error fetching your tickets. Please try again later.");
                     return [3 /*break*/, 4];
                 case 4: return [2 /*return*/];
@@ -254,7 +357,7 @@ function displayMyTicket(ctx) {
 function displayMyBalance(ctx) {
     var _a, _b, _c;
     return __awaiter(this, void 0, void 0, function () {
-        var chatID, walletAddress, backToMainMenuButton, web3, balanceWei, balanceEth, error_5;
+        var chatID, walletAddress, backToMainMenuButton, web3, balanceWei, balanceEth, error_7;
         return __generator(this, function (_d) {
             switch (_d.label) {
                 case 0:
@@ -276,8 +379,8 @@ function displayMyBalance(ctx) {
                     ctx.reply("Your current balance is: ".concat(balanceEth, " ETH"), telegraf_1.Markup.inlineKeyboard(backToMainMenuButton));
                     return [3 /*break*/, 3];
                 case 2:
-                    error_5 = _d.sent();
-                    console.error("Error fetching user's balance:", error_5);
+                    error_7 = _d.sent();
+                    console.error("Error fetching user's balance:", error_7);
                     ctx.reply("Error fetching your balance. Please try again later.");
                     return [3 /*break*/, 3];
                 case 3: return [2 /*return*/];
@@ -385,7 +488,7 @@ bot.action("view_my_balance", function (ctx) { return __awaiter(void 0, void 0, 
 }); });
 var userQueries = {};
 bot.action(/buy_ticket_(\d+)/, function (ctx) { return __awaiter(void 0, void 0, void 0, function () {
-    var lotteryId, chatId, response, data, lotteryData, remainingTickets, maxRows, keyboard, counter, i, row, j, error_6;
+    var lotteryId, chatId, response, data, lotteryData, remainingTickets, maxRows, keyboard, counter, i, row, j, error_8;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -430,8 +533,8 @@ bot.action(/buy_ticket_(\d+)/, function (ctx) { return __awaiter(void 0, void 0,
                 });
                 return [3 /*break*/, 5];
             case 4:
-                error_6 = _a.sent();
-                console.error("Error fetching remaining tickets:", error_6);
+                error_8 = _a.sent();
+                console.error("Error fetching remaining tickets:", error_8);
                 ctx.reply("Error fetching remaining tickets. Please try again later.");
                 return [3 /*break*/, 5];
             case 5: return [2 /*return*/];
@@ -518,7 +621,7 @@ bot.action("transfer_nft", function (ctx) {
     ctx.answerCbQuery("Transferring your NFT into the pool..."); // 这只是一个示例回复
 });
 app.post("/wallet-address", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var walletAddress, chatID, error_7;
+    var walletAddress, chatID, error_9;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -541,8 +644,8 @@ app.post("/wallet-address", function (req, res) { return __awaiter(void 0, void 
                 res.status(200).send({ message: "Address received and sent to Telegram!" });
                 return [3 /*break*/, 5];
             case 4:
-                error_7 = _a.sent();
-                console.error("Error sending message to Telegram:", error_7);
+                error_9 = _a.sent();
+                console.error("Error sending message to Telegram:", error_9);
                 res.status(500).send({ message: "Failed to send message to Telegram." });
                 return [3 /*break*/, 5];
             case 5: return [2 /*return*/];
@@ -550,7 +653,7 @@ app.post("/wallet-address", function (req, res) { return __awaiter(void 0, void 
     });
 }); });
 app.get("/view_open_lottery", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var contract_1, openLotteries, remainingTickets_1, result, error_8;
+    var contract_1, openLotteries, remainingTickets_1, result, error_10;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -571,8 +674,8 @@ app.get("/view_open_lottery", function (req, res) { return __awaiter(void 0, voi
                 res.status(200).json(result);
                 return [3 /*break*/, 4];
             case 3:
-                error_8 = _a.sent();
-                console.error("Error fetching open lotteries:", error_8);
+                error_10 = _a.sent();
+                console.error("Error fetching open lotteries:", error_10);
                 res.status(500).send({ message: "Failed to fetch open lotteries." });
                 return [3 /*break*/, 4];
             case 4: return [2 /*return*/];
@@ -580,7 +683,7 @@ app.get("/view_open_lottery", function (req, res) { return __awaiter(void 0, voi
     });
 }); });
 app.get("/view_closed_lotteries", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var contract, closedLotteriesDetails_1, closedLotteries, error_9;
+    var contract, closedLotteriesDetails_1, closedLotteries, error_11;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -601,8 +704,8 @@ app.get("/view_closed_lotteries", function (req, res) { return __awaiter(void 0,
                 res.status(200).json({ closedLotteries: closedLotteries });
                 return [3 /*break*/, 3];
             case 2:
-                error_9 = _a.sent();
-                console.error("Error fetching closed lotteries details:", error_9.message);
+                error_11 = _a.sent();
+                console.error("Error fetching closed lotteries details:", error_11.message);
                 res
                     .status(500)
                     .send({ message: "Failed to fetch closed lotteries details." });
@@ -612,7 +715,7 @@ app.get("/view_closed_lotteries", function (req, res) { return __awaiter(void 0,
     });
 }); });
 app.get("/view_my_ticket", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var contract, chatID, walletAddress, myTicket, error_10;
+    var contract, chatID, walletAddress, myTicket, error_12;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -629,8 +732,8 @@ app.get("/view_my_ticket", function (req, res) { return __awaiter(void 0, void 0
                 console.log("My Ticket:", myTicket);
                 return [3 /*break*/, 3];
             case 2:
-                error_10 = _a.sent();
-                console.error("Error fetching my ticket:", error_10.message);
+                error_12 = _a.sent();
+                console.error("Error fetching my ticket:", error_12.message);
                 res.status(500).send({ message: "Failed to fetch my ticket." });
                 return [3 /*break*/, 3];
             case 3: return [2 /*return*/];
@@ -649,7 +752,7 @@ server.listen(4000, function () {
         .on("error", console.error);
     function handleLotteryClosed(returnValues) {
         return __awaiter(this, void 0, void 0, function () {
-            var lotteryId, winner, response, data, closedLottery, participants, notifiedChatIDs, _loop_1, _i, participants_1, participant, error_11;
+            var lotteryId, winner, response, data, closedLottery, participants, notifiedChatIDs, _loop_1, _i, participants_1, participant, error_13;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -697,8 +800,8 @@ server.listen(4000, function () {
                         return [3 /*break*/, 4];
                     case 7: return [3 /*break*/, 9];
                     case 8:
-                        error_11 = _a.sent();
-                        console.error("Error sending lottery closed notifications:", error_11);
+                        error_13 = _a.sent();
+                        console.error("Error sending lottery closed notifications:", error_13);
                         return [3 /*break*/, 9];
                     case 9: return [2 /*return*/];
                 }

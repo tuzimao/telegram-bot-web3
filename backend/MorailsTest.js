@@ -39,7 +39,7 @@ exports.__esModule = true;
 var moralis_1 = require("moralis");
 var common_evm_utils_1 = require("@moralisweb3/common-evm-utils");
 var runApp = function () { return __awaiter(void 0, void 0, void 0, function () {
-    var allNFTs, address, chains, _i, chains_1, chain, response, error_1;
+    var allNFTs, address, chains, _i, chains_1, chain, response_1, error_1;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -50,7 +50,7 @@ var runApp = function () { return __awaiter(void 0, void 0, void 0, function () 
             case 1:
                 _a.sent();
                 allNFTs = [];
-                address = "0x3a2963c2E50a7414aAff6B1bb2305DF7629682d6";
+                address = "0xdcF6eF9fd2FcfE2125f23F6Fc0280fDfb9F9A819";
                 chains = [common_evm_utils_1.EvmChain.SEPOLIA];
                 _i = 0, chains_1 = chains;
                 _a.label = 2;
@@ -62,13 +62,15 @@ var runApp = function () { return __awaiter(void 0, void 0, void 0, function () 
                         chain: chain
                     })];
             case 3:
-                response = _a.sent();
-                allNFTs.push(response);
+                response_1 = _a.sent();
+                allNFTs.push(response_1);
+                console.log(response_1);
                 _a.label = 4;
             case 4:
                 _i++;
                 return [3 /*break*/, 2];
             case 5:
+                console.log(allNFTs);
                 console.log(allNFTs[0].jsonResponse.result);
                 return [3 /*break*/, 7];
             case 6:

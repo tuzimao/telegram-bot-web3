@@ -5,6 +5,8 @@ import { Telegraf, Markup } from "telegraf";
 import * as dotenv from "dotenv";
 import * as http from "http";
 import * as socketIo from "socket.io";
+import Moralis from "moralis";
+import { EvmChain } from "@moralisweb3/common-evm-utils";
 declare module "telegraf" {
   interface Context {
     socket?: any;
@@ -107,16 +109,36 @@ async function sendMainMenu(ctx: any) {
     ])
   );
 }
-
 async function displayOpenLotteries(ctx: any) {
   try {
     const response = await fetch("http://localhost:4000/view_open_lottery");
     const data = await response.json();
+    const apiKey = "";
+    await Moralis.start({ apiKey });
+    let message = `Open Lotteries:\n`;
 
+    for (let lotteryInfo of data) {
+      // Get lottery details from the contract
+      const lotteryDetails = await getLotteryDetails(lotteryInfo.lotteryId);
+      console.log("Lottery Details:", lotteryDetails.nftContract);
+      console.log("Lottery Details:", lotteryDetails.tokenId);
+      // Get NFT metadata from Morails
+      const nftMetadata = await getNFTMetadata(
+        lotteryDetails.nftContract,
+        lotteryDetails.tokenId
+      );
+
+      message += `Lottery ${lotteryInfo.lotteryId} (${lotteryInfo.remainingTickets} tickets left) - NFT: ${nftMetadata.name} (${nftMetadata.description})\n`;
+    }
+    console.log("Open Lotteries:", message); ///
+
+    ctx.reply(message);
+
+    // Then, send the buttons in a separate message
     const lotteryButtons = data.map((lotteryInfo: any) => {
       return [
         Markup.button.callback(
-          `Buy Tickets for Lottery ${lotteryInfo.lotteryId} (${lotteryInfo.remainingTickets}) left`,
+          `Buy Tickets for Lottery ${lotteryInfo.lotteryId} (${lotteryInfo.remainingTickets} left)`,
           `buy_ticket_${lotteryInfo.lotteryId}`
         ),
       ];
@@ -135,6 +157,54 @@ async function displayOpenLotteries(ctx: any) {
     );
   } catch (error) {
     ctx.reply("Error fetching open lotteries. Please try again later.");
+  }
+}
+
+// This function fetches the metadata of an NFT from Morails
+
+async function getNFTMetadata(nftContract: string, tokenId: number) {
+  try {
+    let matchingNFT = null;
+    const chains = [EvmChain.SEPOLIA];
+    console.log("nftContract ::", nftContract); ///
+    for (const chain of chains) {
+      const response = await Moralis.EvmApi.nft.getNFTMetadata({
+        address: nftContract,
+        chain,
+        tokenId: tokenId.toString(),
+      });
+      console.log("NFT:", response?.toJSON()); ///
+      const NFT_tokenId = response?.toJSON().token_id;
+      const NFT_address = response?.toJSON().token_address;
+      console.log("NFT_tokenId:", NFT_tokenId); ///
+      console.log("NFT_address:", NFT_address); ///
+
+      const NFT_metadata = response?.toJSON();
+
+      return {
+        name: NFT_metadata.name || "Unknown",
+        description: NFT_metadata.symbol || "No description",
+      };
+    }
+  } catch (error) {
+    console.error("Error fetching NFT metadata:", error);
+    throw error;
+  }
+}
+async function getLotteryDetails(lotteryId: number) {
+  const { contract } = initializeWeb3Contract();
+  try {
+    const lottery = await contract.methods.lotteries(lotteryId).call();
+    console.log("Lottery details:", lottery); ///
+    console.log("Lottery details:", lottery.nftContract); ///
+    console.log("Lottery details:", lottery.tokenId); ///
+    return {
+      nftContract: lottery.nftContract,
+      tokenId: lottery.tokenId,
+    };
+  } catch (error) {
+    console.error("Error fetching lottery details:", error);
+    throw error;
   }
 }
 

@@ -11,7 +11,7 @@ async function main() {
   // 设置要铸造的 NFT 的 URI 和接收者地址
   const recipient = "0x3a2963c2E50a7414aAff6B1bb2305DF7629682d6"; // 将此替换为你的钱包地址
   const tokenURI =
-    "https://sepolia.etherscan.io/address/0x0fbefd89c584a30e4840f81fea56d8187b493260"; // 替换为你的 NFT 的 metadata URI
+    "ipfs://bafkreiayk6phfaq2ema3ndwhdebshfc7h7snet7chrbylk32qmv6t4ytiq"; // 替换为你的 NFT 的 metadata URI
 
   // 调用 mintNFT 函数
   console.log("Minting NFT...");

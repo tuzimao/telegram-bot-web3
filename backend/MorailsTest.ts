@@ -1,5 +1,6 @@
 import Moralis from "moralis";
 import { EvmChain } from "@moralisweb3/common-evm-utils";
+import { response } from "express";
 
 const runApp = async () => {
   try {
@@ -9,7 +10,7 @@ const runApp = async () => {
     });
 
     const allNFTs = [];
-    const address = "0x3a2963c2E50a7414aAff6B1bb2305DF7629682d6";
+    const address = "0xdcF6eF9fd2FcfE2125f23F6Fc0280fDfb9F9A819";
     const chains = [EvmChain.SEPOLIA]; // or EvmChain.ETHEREUM for Ethereum mainnet
 
     for (const chain of chains) {
@@ -18,8 +19,9 @@ const runApp = async () => {
         chain,
       });
       allNFTs.push(response);
+      console.log(response);
     }
-
+    console.log(allNFTs);
     console.log(allNFTs[0].jsonResponse.result);
   } catch (error) {
     console.error("Error fetching NFTs:", error);
