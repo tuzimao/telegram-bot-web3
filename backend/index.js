@@ -486,16 +486,23 @@ bot.action("view_my_balance", function (ctx) { return __awaiter(void 0, void 0, 
     });
 }); });
 bot.action(/view_metadata_(\d+)/, function (ctx) { return __awaiter(void 0, void 0, void 0, function () {
-    var lotteryId, metadata, backToOpenLotteryButton;
+    var lotteryId, metadata, imageUrl, backToOpenLotteryButton;
     return __generator(this, function (_a) {
-        lotteryId = ctx.match[1];
-        metadata = metadataCache[lotteryId];
-        ctx.reply("Metadata for Lottery ".concat(lotteryId, " NFT:\n\n").concat(metadata));
-        backToOpenLotteryButton = [
-            telegraf_1.Markup.button.callback("Back to view lottery", "view_open_lottery"),
-        ];
-        ctx.reply("Back", telegraf_1.Markup.inlineKeyboard(backToOpenLotteryButton));
-        return [2 /*return*/];
+        switch (_a.label) {
+            case 0:
+                lotteryId = ctx.match[1];
+                metadata = metadataCache[lotteryId];
+                ctx.reply("Metadata for Lottery ".concat(lotteryId, " NFT:\n\n").concat(metadata));
+                imageUrl = "https://nftstorage.link/ipfs/bafybeigjmc4xnw53joidylrv3dnrmyjpd6ampuxkq6hujgkhoe3u35aguq";
+                return [4 /*yield*/, ctx.replyWithPhoto(imageUrl)];
+            case 1:
+                _a.sent();
+                backToOpenLotteryButton = [
+                    telegraf_1.Markup.button.callback("Back to view lottery", "view_open_lottery"),
+                ];
+                ctx.reply("Back", telegraf_1.Markup.inlineKeyboard(backToOpenLotteryButton));
+                return [2 /*return*/];
+        }
     });
 }); });
 var userQueries = {};

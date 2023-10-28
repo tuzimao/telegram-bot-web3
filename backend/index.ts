@@ -378,7 +378,9 @@ bot.action("view_my_balance", async (ctx) => {
 bot.action(/view_metadata_(\d+)/, async (ctx) => {
   const lotteryId = ctx.match[1];
   const metadata = metadataCache[lotteryId];
-  ctx.reply(`Metadata for Lottery ${lotteryId} NFT:\n\n${metadata}`);
+  await ctx.reply(`Metadata for Lottery ${lotteryId} NFT:\n\n${metadata}`);
+  const imageUrl = `https://nftstorage.link/ipfs/bafybeigjmc4xnw53joidylrv3dnrmyjpd6ampuxkq6hujgkhoe3u35aguq`;
+  await ctx.replyWithPhoto(imageUrl);
   const backToOpenLotteryButton = [
     Markup.button.callback("Back to view lottery", "view_open_lottery"),
   ];
