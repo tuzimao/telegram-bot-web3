@@ -97,7 +97,7 @@ function initializeWeb3Contract() {
 }
 
 async function sendMainMenu(ctx: any) {
-  return ctx.reply(
+  return await ctx.reply(
     "Choose an option:",
     Markup.inlineKeyboard([
       [Markup.button.callback("How To Play 😎", "how_to_play")],
@@ -377,10 +377,35 @@ bot.action("view_my_balance", async (ctx) => {
 
 bot.action(/view_metadata_(\d+)/, async (ctx) => {
   const lotteryId = ctx.match[1];
-  const metadata = metadataCache[lotteryId];
-  await ctx.reply(`Metadata for Lottery ${lotteryId} NFT:\n\n${metadata}`);
-  const imageUrl = `https://nftstorage.link/ipfs/bafybeigjmc4xnw53joidylrv3dnrmyjpd6ampuxkq6hujgkhoe3u35aguq`;
-  await ctx.replyWithPhoto(imageUrl);
+  const metadataString = metadataCache[lotteryId];
+  const metadata = JSON.parse(metadataString); // Parse the string to get a JavaScript object
+
+  const formattedMetadata = `
+  Name: ${metadata.name}\n
+  Description: ${metadata.description}\n
+  Image Link: ${metadata.image}\n
+  Attributes:
+  ${metadata.attributes
+    .map((attr) => `- ${attr.trait_type}: ${attr.value}`)
+    .join("\n")}
+  `;
+
+  await ctx.reply(
+    `Metadata for Lottery ${lotteryId} NFT:\n\n${formattedMetadata}`
+  );
+  console.log("metadata:", metadata);
+  console.log("metadata image:", metadata.image);
+
+  const ipfsGateway = "https://nftstorage.link/ipfs/";
+  let imageUrl = "";
+
+  if (metadata && metadata.image) {
+    imageUrl = metadata.image.replace("ipfs://", ipfsGateway);
+    await ctx.replyWithPhoto(imageUrl);
+  } else {
+    await ctx.reply("No image available for this NFT.");
+  }
+
   const backToOpenLotteryButton = [
     Markup.button.callback("Back to view lottery", "view_open_lottery"),
   ];

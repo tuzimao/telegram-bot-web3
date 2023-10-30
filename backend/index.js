@@ -486,17 +486,34 @@ bot.action("view_my_balance", function (ctx) { return __awaiter(void 0, void 0, 
     });
 }); });
 bot.action(/view_metadata_(\d+)/, function (ctx) { return __awaiter(void 0, void 0, void 0, function () {
-    var lotteryId, metadata, imageUrl, backToOpenLotteryButton;
+    var lotteryId, metadataString, metadata, formattedMetadata, ipfsGateway, imageUrl, backToOpenLotteryButton;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
                 lotteryId = ctx.match[1];
-                metadata = metadataCache[lotteryId];
-                ctx.reply("Metadata for Lottery ".concat(lotteryId, " NFT:\n\n").concat(metadata));
-                imageUrl = "https://nftstorage.link/ipfs/bafybeigjmc4xnw53joidylrv3dnrmyjpd6ampuxkq6hujgkhoe3u35aguq";
-                return [4 /*yield*/, ctx.replyWithPhoto(imageUrl)];
+                metadataString = metadataCache[lotteryId];
+                metadata = JSON.parse(metadataString);
+                formattedMetadata = "\n  Name: ".concat(metadata.name, "\n\n  Description: ").concat(metadata.description, "\n\n  Image Link: ").concat(metadata.image, "\n\n  Attributes:\n  ").concat(metadata.attributes
+                    .map(function (attr) { return "- ".concat(attr.trait_type, ": ").concat(attr.value); })
+                    .join("\n"), "\n  ");
+                return [4 /*yield*/, ctx.reply("Metadata for Lottery ".concat(lotteryId, " NFT:\n\n").concat(formattedMetadata))];
             case 1:
                 _a.sent();
+                console.log("metadata:", metadata);
+                console.log("metadata image:", metadata.image);
+                ipfsGateway = "https://nftstorage.link/ipfs/";
+                imageUrl = "";
+                if (!(metadata && metadata.image)) return [3 /*break*/, 3];
+                imageUrl = metadata.image.replace("ipfs://", ipfsGateway);
+                return [4 /*yield*/, ctx.replyWithPhoto(imageUrl)];
+            case 2:
+                _a.sent();
+                return [3 /*break*/, 5];
+            case 3: return [4 /*yield*/, ctx.reply("No image available for this NFT.")];
+            case 4:
+                _a.sent();
+                _a.label = 5;
+            case 5:
                 backToOpenLotteryButton = [
                     telegraf_1.Markup.button.callback("Back to view lottery", "view_open_lottery"),
                 ];
