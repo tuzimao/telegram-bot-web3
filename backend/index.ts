@@ -7,6 +7,7 @@ import * as http from "http";
 import * as socketIo from "socket.io";
 import Moralis from "moralis";
 import { EvmChain } from "@moralisweb3/common-evm-utils";
+import { json } from "hardhat/internal/core/params/argumentTypes";
 declare module "telegraf" {
   interface Context {
     socket?: any;
@@ -105,6 +106,7 @@ async function sendMainMenu(ctx: any) {
       [Markup.button.callback("View Lottery Winner 🔍", "view_closed_lottery")],
       [Markup.button.callback("View My Lottery Ticket", "view_my_ticket")],
       [Markup.button.callback("View My Current Balance", "view_my_balance")],
+      [Markup.button.callback("View My NFT", "view_my_nft")],
       [Markup.button.callback("Transfer My NFT Into Pool", "transfer_nft_in")],
     ])
   );
@@ -117,61 +119,64 @@ async function displayOpenLotteries(ctx: any) {
   try {
     const response = await fetch("http://localhost:4000/view_open_lottery");
     const data = await response.json();
-    let message = `Open Lotteries:\n`;
 
-    const lotteryButtons = []; // Moved outside the loop to collect all buttons
+    // 用来保存所有的异步任务
+    const allTasks: Promise<any>[] = [];
 
     for (let lotteryInfo of data) {
-      const lotteryDetails = await getLotteryDetails(lotteryInfo.lotteryId);
-      const nftdata = await getNFTMetadata(
-        lotteryDetails.nftContract,
-        lotteryDetails.tokenId
-      );
+      const task = (async () => {
+        const lotteryDetails = await getLotteryDetails(lotteryInfo.lotteryId);
+        const nftdata = await getNFTMetadata(
+          lotteryDetails.nftContract,
+          lotteryDetails.tokenId
+        );
 
-      message += `Lottery ${lotteryInfo.lotteryId} (${lotteryInfo.remainingTickets} tickets left) - NFT: ${nftdata.name} (${nftdata.symbol})\n`;
+        let message = `Lottery ${lotteryInfo.lotteryId} (${lotteryInfo.remainingTickets} tickets left) - NFT: ${nftdata.name} (${nftdata.symbol})\n`;
 
-      // Add a button for each lottery
-      lotteryButtons.push([
-        Markup.button.callback(
-          `Buy Tickets for Lottery ${lotteryInfo.lotteryId} (${lotteryInfo.remainingTickets} left)`,
-          `buy_ticket_${lotteryInfo.lotteryId}`
-        ),
-      ]);
+        // 准备对应的按钮
+        const lotteryButtons = [
+          [
+            Markup.button.callback(
+              `Buy Lottery ${lotteryInfo.lotteryId} (${lotteryInfo.remainingTickets} left)`,
+              `buy_ticket_${lotteryInfo.lotteryId}`
+            ),
+          ],
+        ];
 
-      // Check if NFT has metadata and add a button to view it
-      if (nftdata.metadata && nftdata.metadata !== "No metadata") {
-        metadataCache[lotteryInfo.lotteryId] = nftdata.metadata;
-        lotteryButtons.push([
-          Markup.button.callback(
-            `View Metadata for Lottery ${lotteryInfo.lotteryId}`,
-            `view_metadata_${lotteryInfo.lotteryId}`
-          ),
-        ]);
-      } else {
-        message += `Metadata: No metadata\n`;
-      }
+        if (nftdata.metadata && nftdata.metadata !== "No metadata") {
+          metadataCache[lotteryInfo.lotteryId] = nftdata.metadata;
+          lotteryButtons.push([
+            Markup.button.callback(
+              `View Metadata Lottery ${lotteryInfo.lotteryId}`,
+              `view_metadata_${lotteryInfo.lotteryId}`
+            ),
+          ]);
+        }
+
+        // 一起发送NFT信息和对应的按钮
+        await ctx.reply(message, {
+          reply_markup: { inline_keyboard: lotteryButtons },
+          parse_mode: "Markdown",
+        });
+      })();
+
+      allTasks.push(task);
     }
 
-    console.log("Open Lotteries:", message);
-    ctx.reply(message);
+    // 等待所有的异步任务完成
+    await Promise.all(allTasks);
 
-    // Add the "Back To Main Menu" button
-    lotteryButtons.push([
-      Markup.button.callback("Back To Main Menu", "back_to_main_menu"),
-    ]);
-
-    ctx.reply(
-      `Open Lotteries: ${data
-        .map((lotteryInfo: any) => lotteryInfo.lotteryId)
-        .join(", ")}`,
-      Markup.inlineKeyboard(lotteryButtons)
-    );
+    // 最后，添加返回主菜单的按钮
+    const backToMainMenuButton = [
+      [Markup.button.callback("Back To Main Menu", "back_to_main_menu")],
+    ];
+    ctx.reply("Back to the main menu?", {
+      reply_markup: { inline_keyboard: backToMainMenuButton },
+    });
   } catch (error) {
     ctx.reply("Error fetching open lotteries. Please try again later.");
   }
 }
-
-// This function fetches the metadata of an NFT from Morails
 
 async function getNFTMetadata(nftContract: string, tokenId: number) {
   try {
@@ -202,6 +207,79 @@ async function getNFTMetadata(nftContract: string, tokenId: number) {
     throw error;
   }
 }
+// display User's NFT
+async function displayMyNFT(ctx: any) {
+  const chatID =
+    ctx.message?.chat.id.toString() ||
+    ctx.update.callback_query?.message?.chat.id.toString();
+  const walletAddress = userWallets[chatID];
+  console.log("walletAddress:", walletAddress);
+  await ctx.reply("NFT owned by address: " + walletAddress);
+  const chains = [EvmChain.SEPOLIA];
+
+  const allReplies: Promise<any>[] = []; // 存储所有的回复操作
+
+  for (const chain of chains) {
+    const response = await Moralis.EvmApi.nft.getWalletNFTs({
+      address: walletAddress,
+      chain,
+    });
+
+    const NFTs = response?.toJSON();
+    console.log("NFTs:", NFTs);
+
+    if (
+      NFTs &&
+      NFTs.result &&
+      Array.isArray(NFTs.result) &&
+      NFTs.result.length > 0
+    ) {
+      for (const nft of NFTs.result) {
+        let message = `
+          *Name:* ${nft.name}
+          *Symbol:* ${nft.symbol}
+          *Token ID:* ${nft.token_id}
+          *Token Address:* [${nft.token_address}](${nft.token_uri})
+          *Token URI:* [Link](${nft.token_uri})
+        `;
+
+        const buttons = [];
+        if (nft.metadata && nft.metadata !== "No metadata") {
+          metadataCache[nft.token_id] = nft.metadata; // Store metadata for later retrieval
+          buttons.push([
+            Markup.button.callback(
+              `View Metadata for NFT ${nft.token_id}`,
+              `view_my_nft_metadata_${nft.token_id}`
+            ),
+          ]);
+        } else {
+          message += `Metadata: No metadata\n`;
+        }
+        allReplies.push(ctx.reply(message, { parse_mode: "Markdown" }));
+        if (buttons.length > 0) {
+          allReplies.push(
+            ctx.reply("Actions:", Markup.inlineKeyboard(buttons))
+          );
+        }
+      }
+    } else {
+      allReplies.push(ctx.reply("You don't have any NFTs yet."));
+    }
+  }
+
+  // 等待所有NFT消息发送完成
+  await Promise.all(allReplies);
+
+  // 然后发送返回主菜单的消息
+  const backToMainMenuButton = [
+    Markup.button.callback("Back To Main Menu", "back_to_main_menu"),
+  ];
+  ctx.reply(
+    "Back to the main menu?",
+    Markup.inlineKeyboard(backToMainMenuButton)
+  );
+}
+
 async function getLotteryDetails(lotteryId: number) {
   const { contract } = initializeWeb3Contract();
   try {
@@ -320,6 +398,7 @@ bot.command("menu", (ctx) => {
       [Markup.button.callback("View My Lottery Ticket", "view_my_ticket")],
       [Markup.button.callback("View My Current Balance", "view_my_balance")],
       [Markup.button.callback("Transfer My NFT Into Pool", "transfer_nft_in")],
+      [Markup.button.callback("View Lottery Winner 🔍", "view_closed_lottery")],
     ])
   );
 });
@@ -374,6 +453,10 @@ bot.action("view_my_balance", async (ctx) => {
   await ctx.answerCbQuery("Fetching your balance...");
   await displayMyBalance(ctx);
 });
+bot.action("view_my_nft", async (ctx) => {
+  await ctx.answerCbQuery("Fetching your NFT...");
+  await displayMyNFT(ctx);
+});
 
 bot.action(/view_metadata_(\d+)/, async (ctx) => {
   const lotteryId = ctx.match[1];
@@ -410,6 +493,37 @@ bot.action(/view_metadata_(\d+)/, async (ctx) => {
     Markup.button.callback("Back to view lottery", "view_open_lottery"),
   ];
   ctx.reply("Back", Markup.inlineKeyboard(backToOpenLotteryButton));
+});
+
+bot.action(/view_my_nft_metadata_(\d+)/, async (ctx) => {
+  const tokenId = ctx.match[1];
+  const metadataString = metadataCache[tokenId];
+  const metadata = JSON.parse(metadataString);
+
+  const formattedMetadata = `
+    Name: ${metadata.name}\n
+    Description: ${metadata.description}\n
+    Image Link: ${metadata.image}\n
+    Attributes:
+    ${metadata.attributes
+      .map((attr) => `- ${attr.trait_type}: ${attr.value}`)
+      .join("\n")}
+  `;
+
+  await ctx.reply(`Metadata for NFT ${tokenId}:\n\n${formattedMetadata}`);
+  const ipfsGateway = "https://nftstorage.link/ipfs/";
+  let imageUrl = "";
+  if (metadata && metadata.image) {
+    imageUrl = metadata.image.replace("ipfs://", ipfsGateway);
+    await ctx.replyWithPhoto(imageUrl);
+  } else {
+    await ctx.reply("No image available for this NFT.");
+  }
+
+  const backToViewNFTButton = [
+    Markup.button.callback("Back to view NFTs", "view_my_nft"),
+  ];
+  ctx.reply("Back", Markup.inlineKeyboard(backToViewNFTButton));
 });
 
 const userQueries: { [key: string]: { type: string; lotteryId: string } } = {};
