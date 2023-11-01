@@ -457,7 +457,10 @@ bot.action("view_my_nft", async (ctx) => {
   await ctx.answerCbQuery("Fetching your NFT...");
   await displayMyNFT(ctx);
 });
-
+bot.action("transfer_nft_in", async (ctx) => {
+  await ctx.answerCbQuery("Loading transfer page...");
+  await transferNFTIn(ctx);
+});
 bot.action(/view_metadata_(\d+)/, async (ctx) => {
   const lotteryId = ctx.match[1];
   const metadataString = metadataCache[lotteryId];

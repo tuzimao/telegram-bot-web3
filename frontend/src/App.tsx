@@ -17,6 +17,7 @@ import {
 import { useAccount } from "wagmi";
 import { sendAddressToServer } from "./getWalletAddressAPI";
 import LotteryManagerABI from "./LotteryManagerV2ABI.json";
+import ERC721StandardABI from "./ERC721Standard.json";
 import io from "socket.io-client";
 import { Wallet, ethers } from "ethers";
 interface TicketRequest {
@@ -51,10 +52,11 @@ const web3 = new Web3(
     "https://sepolia.infura.io/v3/73d62d6d12454a5d8866f12d641e9dc5"
   )
 );
-const abi = LotteryManagerABI;
+const LMabi = LotteryManagerABI;
+const ERC721abi = ERC721StandardABI;
 
-const contractAddress = "0xdcF6eF9fd2FcfE2125f23F6Fc0280fDfb9F9A819";
-const contract = new web3.eth.Contract(abi, contractAddress);
+const LMcontractAddress = "0xdcF6eF9fd2FcfE2125f23F6Fc0280fDfb9F9A819";
+const contract = new web3.eth.Contract(LMabi, LMcontractAddress);
 
 const connectToBlockchain = async () => {
   console.log("Attempting to connect to blockchain");
