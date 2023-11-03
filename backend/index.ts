@@ -458,6 +458,73 @@ bot.action("view_my_nft", async (ctx) => {
   await displayMyNFT(ctx);
 });
 
+interface UserState {
+  step: "awaiting_contract_address" | "awaiting_token_id";
+  contractAddress?: string;
+}
+
+const state: Record<number, UserState> = {};
+
+bot.action("transfer_nft_in", async (ctx) => {
+  await ctx.answerCbQuery("Fetching your NFT...");
+  await ctx.reply("Please send your NFT contract address.");
+
+  const userId = ctx.from.id;
+  state[userId] = { step: "awaiting_contract_address" };
+});
+
+bot.hears(/.*/, async (ctx) => {
+  const userId = ctx.from.id;
+  const userState = state[userId];
+
+  if (userState && userState.step === "awaiting_contract_address") {
+    const contractAddress = ctx.message?.text;
+    console.log("contractAddress:", contractAddress);
+
+    if (contractAddress && Web3.utils.isAddress(contractAddress)) {
+      await ctx.reply("Now, please enter your NFT token ID.");
+      userState.step = "awaiting_token_id";
+      userState.contractAddress = contractAddress;
+    } else {
+      await ctx.reply(
+        "That doesn't look like a valid Ethereum address. Please try again."
+      );
+    }
+  } else if (userState && userState.step === "awaiting_token_id") {
+    const tokenIdText = ctx.message?.text;
+    const tokenId = parseFloat(tokenIdText);
+
+    console.log("tokenId:", tokenId);
+
+    if (!isNaN(tokenId)) {
+      // 在这里处理 NFT token ID
+      const contractAddress = userState.contractAddress;
+      await ctx.reply(
+        "The contract address and token ID you entered are " +
+          contractAddress +
+          " and " +
+          tokenIdText +
+          ", please confirm the process",
+        Markup.inlineKeyboard([
+          [
+            Markup.button.callback(
+              `Confirm`,
+              `confirm_transfer_${contractAddress}_${tokenId}`
+            ),
+            Markup.button.callback("Cancel", "cancel_transfer"),
+          ],
+        ])
+      );
+
+      delete state[userId]; // 清除状态，因为已完成处理
+    } else {
+      await ctx.reply(
+        "That doesn't look like a valid token ID. Please try again."
+      );
+    }
+  }
+});
+
 bot.action(/view_metadata_(\d+)/, async (ctx) => {
   const lotteryId = ctx.match[1];
   const metadataString = metadataCache[lotteryId];
@@ -631,15 +698,33 @@ bot.action(/confirm_buy_([0-9]+)_([0-9]+)/, async (ctx) => {
   );
 });
 
+bot.action(/confirm_transfer_(.+?)_(.+)/, async (ctx) => {
+  const NFT_address = ctx.match![1];
+  const NFT_tokenId = ctx.match![2];
+
+  if (ctx.socket) {
+    console.log("Emitting Transfer NFT to frontend with data:", {
+      NFT_address,
+      NFT_tokenId,
+    });
+    ctx.socket.emit("buyTicketRequest", { NFT_address, NFT_tokenId });
+  } else {
+    console.error("No active socket connection to send data to frontend.");
+  }
+
+  ctx.reply(`Confirmed transfer Processing...`);
+});
+
 bot.action("cancel_buy", async (ctx) => {
   // Return to the view_open_lottery level
   await ctx.reply("Purchase cancelled.");
   await displayOpenLotteries(ctx);
 });
 
-bot.action("transfer_nft", (ctx) => {
-  // 这里你可以写代码来处理 "Transfer My NFT Into Pool" 的逻辑
-  ctx.answerCbQuery("Transferring your NFT into the pool..."); // 这只是一个示例回复
+bot.action("cancel_transfer", async (ctx) => {
+  delete state[ctx.from.id];
+  await ctx.reply("Transfer cancelled.");
+  await sendMainMenu(ctx);
 });
 
 app.post("/wallet-address", async (req, res) => {

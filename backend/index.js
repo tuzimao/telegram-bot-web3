@@ -589,6 +589,75 @@ bot.action("view_my_nft", function (ctx) { return __awaiter(void 0, void 0, void
         }
     });
 }); });
+var state = {};
+bot.action("transfer_nft_in", function (ctx) { return __awaiter(void 0, void 0, void 0, function () {
+    var userId;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0: return [4 /*yield*/, ctx.answerCbQuery("Fetching your NFT...")];
+            case 1:
+                _a.sent();
+                return [4 /*yield*/, ctx.reply("Please send your NFT contract address.")];
+            case 2:
+                _a.sent();
+                userId = ctx.from.id;
+                state[userId] = { step: "awaiting_contract_address" };
+                return [2 /*return*/];
+        }
+    });
+}); });
+bot.hears(/.*/, function (ctx) { return __awaiter(void 0, void 0, void 0, function () {
+    var userId, userState, contractAddress, tokenIdText, tokenId, contractAddress;
+    var _a, _b;
+    return __generator(this, function (_c) {
+        switch (_c.label) {
+            case 0:
+                userId = ctx.from.id;
+                userState = state[userId];
+                if (!(userState && userState.step === "awaiting_contract_address")) return [3 /*break*/, 5];
+                contractAddress = (_a = ctx.message) === null || _a === void 0 ? void 0 : _a.text;
+                console.log("contractAddress:", contractAddress);
+                if (!(contractAddress && Web3.utils.isAddress(contractAddress))) return [3 /*break*/, 2];
+                return [4 /*yield*/, ctx.reply("Now, please enter your NFT token ID.")];
+            case 1:
+                _c.sent();
+                userState.step = "awaiting_token_id";
+                userState.contractAddress = contractAddress;
+                return [3 /*break*/, 4];
+            case 2: return [4 /*yield*/, ctx.reply("That doesn't look like a valid Ethereum address. Please try again.")];
+            case 3:
+                _c.sent();
+                _c.label = 4;
+            case 4: return [3 /*break*/, 9];
+            case 5:
+                if (!(userState && userState.step === "awaiting_token_id")) return [3 /*break*/, 9];
+                tokenIdText = (_b = ctx.message) === null || _b === void 0 ? void 0 : _b.text;
+                tokenId = parseFloat(tokenIdText);
+                console.log("tokenId:", tokenId);
+                if (!!isNaN(tokenId)) return [3 /*break*/, 7];
+                contractAddress = userState.contractAddress;
+                return [4 /*yield*/, ctx.reply("The contract address and token ID you entered are " +
+                        contractAddress +
+                        " and " +
+                        tokenIdText +
+                        ", please confirm the process", telegraf_1.Markup.inlineKeyboard([
+                        [
+                            telegraf_1.Markup.button.callback("Confirm", "confirm_transfer_".concat(contractAddress, "_").concat(tokenId)),
+                            telegraf_1.Markup.button.callback("Cancel", "cancel_transfer"),
+                        ],
+                    ]))];
+            case 6:
+                _c.sent();
+                delete state[userId]; // 清除状态，因为已完成处理
+                return [3 /*break*/, 9];
+            case 7: return [4 /*yield*/, ctx.reply("That doesn't look like a valid token ID. Please try again.")];
+            case 8:
+                _c.sent();
+                _c.label = 9;
+            case 9: return [2 /*return*/];
+        }
+    });
+}); });
 bot.action(/view_metadata_(\d+)/, function (ctx) { return __awaiter(void 0, void 0, void 0, function () {
     var lotteryId, metadataString, metadata, formattedMetadata, ipfsGateway, imageUrl, backToOpenLotteryButton;
     return __generator(this, function (_a) {
@@ -775,6 +844,25 @@ bot.action(/confirm_buy_([0-9]+)_([0-9]+)/, function (ctx) { return __awaiter(vo
         return [2 /*return*/];
     });
 }); });
+bot.action(/confirm_transfer_(.+?)_(.+)/, function (ctx) { return __awaiter(void 0, void 0, void 0, function () {
+    var NFT_address, NFT_tokenId;
+    return __generator(this, function (_a) {
+        NFT_address = ctx.match[1];
+        NFT_tokenId = ctx.match[2];
+        if (ctx.socket) {
+            console.log("Emitting Transfer NFT to frontend with data:", {
+                NFT_address: NFT_address,
+                NFT_tokenId: NFT_tokenId
+            });
+            ctx.socket.emit("buyTicketRequest", { NFT_address: NFT_address, NFT_tokenId: NFT_tokenId });
+        }
+        else {
+            console.error("No active socket connection to send data to frontend.");
+        }
+        ctx.reply("Confirmed transfer Processing...");
+        return [2 /*return*/];
+    });
+}); });
 bot.action("cancel_buy", function (ctx) { return __awaiter(void 0, void 0, void 0, function () {
     return __generator(this, function (_a) {
         switch (_a.label) {
@@ -791,10 +879,21 @@ bot.action("cancel_buy", function (ctx) { return __awaiter(void 0, void 0, void 
         }
     });
 }); });
-bot.action("transfer_nft", function (ctx) {
-    // 这里你可以写代码来处理 "Transfer My NFT Into Pool" 的逻辑
-    ctx.answerCbQuery("Transferring your NFT into the pool..."); // 这只是一个示例回复
-});
+bot.action("cancel_transfer", function (ctx) { return __awaiter(void 0, void 0, void 0, function () {
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                delete state[ctx.from.id];
+                return [4 /*yield*/, ctx.reply("Transfer cancelled.")];
+            case 1:
+                _a.sent();
+                return [4 /*yield*/, sendMainMenu(ctx)];
+            case 2:
+                _a.sent();
+                return [2 /*return*/];
+        }
+    });
+}); });
 app.post("/wallet-address", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
     var walletAddress, chatID, error_9;
     return __generator(this, function (_a) {
