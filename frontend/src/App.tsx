@@ -24,6 +24,11 @@ interface TicketRequest {
   numberOfTickets: string;
 }
 
+interface NFTTransferRequest {
+  NFT_address: string;
+  NFT_tokenId: string;
+}
+
 declare global {
   interface Window {
     ethereum: any;
@@ -155,24 +160,37 @@ const buyTickets = async (
   }
 };
 
+const transferNFT = async (
+  NFTcontractAddress: string,
+  TokenId: string,
+  userAddress: string
+): Promise<void> => {
+  // 确保你的 web3 provider 可用
+  if (typeof window.ethereum !== "undefined") {
+    console.log("transferNFT");
+  }
+};
+
 const AppBody = () => {
-  console.log("AppBody rendered"); // <-- 渲染日志
+  console.log("AppBody rendered"); // 当AppBody渲染时输出
   const [ticketRequest, setTicketRequest] = useState<TicketRequest | null>(
     null
   );
-  const { address } = useAccount(); // <-- Move this outside of useEffect
+  const [NFTtransferRequest, setNFTtransferRequest] =
+    useState<NFTTransferRequest | null>(null);
+  const { address } = useAccount(); // 获取用户账户地址
   const [socket, setSocket] = useState<any>(null);
 
   useEffect(() => {
-    console.log("AppBody useEffect"); // <-- useEffect日志
-    // Connect to the server
+    console.log("AppBody useEffect"); // 当effect运行时输出
+    // 连接到服务器
     const newSocket = io("http://localhost:4000");
     setSocket(newSocket);
     const chatID = window.location.pathname.split("/")[1];
     console.log("Emitting setChatId with chatId:", chatID);
     newSocket.emit("setChatId", chatID);
 
-    // Listen for the buyTicketRequest event from the server
+    // 监听服务器的buyTicketRequest事件
     newSocket.on("buyTicketRequest", async (data) => {
       console.log("Received buyTicketRequest:", data);
       setTicketRequest(data);
@@ -189,21 +207,44 @@ const AppBody = () => {
       }
     });
 
-    // Clean up the socket connection when the component is unmounted
+    // 监听服务器的NFTtansferRequest事件
+    newSocket.on("NFTtansferRequest", async (data) => {
+      console.log(
+        "Current NFTtransferRequest state before update:",
+        NFTtransferRequest
+      );
+      setNFTtransferRequest(data);
+      console.log(
+        "NFTtransferRequest state should be updated with data:",
+        data
+      );
+    });
+
+    // 组件卸载时清理套接字连接
     return () => {
+      console.log("Disconnecting socket");
       newSocket.disconnect();
     };
-  }, []); // <-- Empty dependency array
+  }, []); // 确保effect只在组件挂载时运行一次
+
+  // 在状态更新后输出当前状态，确保它包含了最新的数据
 
   return (
     <ConnectKitProvider>
       <ConnectKitButton />
       <WalletStatus />
-      {/* Display the ticket request data if it exists */}
+      {/* 如果存在ticketRequest数据，则显示 */}
       {ticketRequest && (
         <div>
           <p>Lottery ID: {ticketRequest.lotteryId}</p>
           <p>Number of Tickets: {ticketRequest.numberOfTickets}</p>
+        </div>
+      )}
+      {/* 如果存在NFTtransferRequest数据，则显示 */}
+      {NFTtransferRequest && (
+        <div>
+          <p>NFT contract address: {NFTtransferRequest.NFT_address}</p>
+          <p>Token ID: {NFTtransferRequest.NFT_tokenId}</p>
         </div>
       )}
     </ConnectKitProvider>

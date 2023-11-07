@@ -413,14 +413,6 @@ bot.use((ctx, next) => {
   ctx.socket = activeSockets[chatId];
   console.log("Active sockets chatIds:", Object.keys(activeSockets));
   console.log("Socket for current chatId:", ctx.socket);
-
-  // if (ctx.socket) {
-  //   console.log("Emitting buyTicketRequest to frontend with data:");
-  //   ctx.socket.emit("buyTicketRequest", { numberOfTickets: 1, lotteryId: 1 });
-  // } else {
-  //   console.error("No active socket connection to send data to frontend.");
-  // }
-
   return next();
 });
 
@@ -459,8 +451,12 @@ bot.action("view_my_nft", async (ctx) => {
 });
 
 interface UserState {
-  step: "awaiting_contract_address" | "awaiting_token_id";
+  step:
+    | "awaiting_contract_address"
+    | "awaiting_token_id"
+    | "awaiting_buy_ticket";
   contractAddress?: string;
+  lotteryId?: string; // 新增lotteryId来替代userQueries
 }
 
 const state: Record<number, UserState> = {};
@@ -477,51 +473,81 @@ bot.hears(/.*/, async (ctx) => {
   const userId = ctx.from.id;
   const userState = state[userId];
 
-  if (userState && userState.step === "awaiting_contract_address") {
-    const contractAddress = ctx.message?.text;
-    console.log("contractAddress:", contractAddress);
-
-    if (contractAddress && Web3.utils.isAddress(contractAddress)) {
-      await ctx.reply("Now, please enter your NFT token ID.");
-      userState.step = "awaiting_token_id";
-      userState.contractAddress = contractAddress;
-    } else {
-      await ctx.reply(
-        "That doesn't look like a valid Ethereum address. Please try again."
-      );
+  // 无论什么时候用户发送文本，我们都检查用户状态来确定下一步行动
+  if (userState) {
+    switch (userState.step) {
+      case "awaiting_buy_ticket": {
+        const numberOfTickets = parseInt(ctx.message.text, 10);
+        if (
+          !isNaN(numberOfTickets) &&
+          numberOfTickets >= 1 &&
+          numberOfTickets <= 10
+        ) {
+          // 提供确认和取消按钮
+          ctx.reply(
+            `Do you want to buy ${numberOfTickets} tickets for Lottery ${userState.lotteryId}?`,
+            Markup.inlineKeyboard([
+              [
+                Markup.button.callback(
+                  `Confirm`,
+                  `confirm_buy_${numberOfTickets}_${userState.lotteryId}`
+                ),
+              ],
+              [Markup.button.callback("Cancel", "cancel_buy")],
+            ])
+          );
+        } else {
+          ctx.reply("Please enter a valid number between 1 and 10.");
+        }
+        break;
+      }
+      case "awaiting_contract_address": {
+        const contractAddress = ctx.message.text;
+        if (Web3.utils.isAddress(contractAddress)) {
+          ctx.reply("Now, please enter your NFT token ID.");
+          userState.contractAddress = contractAddress;
+          userState.step = "awaiting_token_id";
+        } else {
+          ctx.reply(
+            "That doesn't look like a valid Ethereum address. Please try again."
+          );
+        }
+        break;
+      }
+      case "awaiting_token_id": {
+        const tokenIdText = ctx.message.text;
+        const tokenId = parseFloat(tokenIdText);
+        if (!isNaN(tokenId)) {
+          const contractAddress = userState.contractAddress;
+          ctx.reply(
+            `The contract address and token ID you entered are ${contractAddress} and ${tokenIdText}, please confirm the process`,
+            Markup.inlineKeyboard([
+              [
+                Markup.button.callback(
+                  `Confirm`,
+                  `confirm_transfer_${contractAddress}_${tokenId}`
+                ),
+              ],
+              [Markup.button.callback("Cancel", "cancel_transfer")],
+            ])
+          );
+          delete state[userId]; // 清除状态，因为已完成处理
+        } else {
+          ctx.reply(
+            "That doesn't look like a valid token ID. Please try again."
+          );
+        }
+        break;
+      }
+      default:
+        // 这里处理不匹配任何状态的文本消息
+        ctx.reply(
+          "I'm not sure what you're trying to do. Can you try again or use the menu?"
+        );
     }
-  } else if (userState && userState.step === "awaiting_token_id") {
-    const tokenIdText = ctx.message?.text;
-    const tokenId = parseFloat(tokenIdText);
-
-    console.log("tokenId:", tokenId);
-
-    if (!isNaN(tokenId)) {
-      // 在这里处理 NFT token ID
-      const contractAddress = userState.contractAddress;
-      await ctx.reply(
-        "The contract address and token ID you entered are " +
-          contractAddress +
-          " and " +
-          tokenIdText +
-          ", please confirm the process",
-        Markup.inlineKeyboard([
-          [
-            Markup.button.callback(
-              `Confirm`,
-              `confirm_transfer_${contractAddress}_${tokenId}`
-            ),
-            Markup.button.callback("Cancel", "cancel_transfer"),
-          ],
-        ])
-      );
-
-      delete state[userId]; // 清除状态，因为已完成处理
-    } else {
-      await ctx.reply(
-        "That doesn't look like a valid token ID. Please try again."
-      );
-    }
+  } else {
+    // 用户状态不存在时的默认行为
+    ctx.reply("Welcome! Please select an option from the menu.");
   }
 });
 
@@ -593,10 +619,9 @@ bot.action(/view_my_nft_metadata_(\d+)/, async (ctx) => {
   ctx.reply("Back", Markup.inlineKeyboard(backToViewNFTButton));
 });
 
-const userQueries: { [key: string]: { type: string; lotteryId: string } } = {};
 bot.action(/buy_ticket_(\d+)/, async (ctx) => {
   const lotteryId = ctx.match![1];
-  const chatId = ctx.update.callback_query!.message!.chat.id.toString();
+  const userId = ctx.from.id;
 
   try {
     // Fetch all open lotteries and their remaining tickets
@@ -623,9 +648,9 @@ bot.action(/buy_ticket_(\d+)/, async (ctx) => {
     }
 
     // Store user query
-    userQueries[chatId] = {
-      type: "buyTicket",
-      lotteryId,
+    state[userId] = {
+      step: "awaiting_buy_ticket",
+      lotteryId: lotteryId,
     };
 
     keyboard.push(["Cancel"]);
@@ -649,34 +674,6 @@ bot.hears("Cancel", async (ctx) => {
   // Handle the cancellation here
   await ctx.reply("Purchase cancelled.");
   await displayOpenLotteries(ctx);
-});
-
-bot.on("text", async (ctx) => {
-  const chatId = ctx.message!.chat.id.toString();
-  const text = ctx.message!.text;
-  const userQuery = userQueries[chatId];
-
-  if (userQuery && userQuery.type === "buyTicket") {
-    const numberOfTickets = parseInt(text, 10);
-
-    if (numberOfTickets >= 1 && numberOfTickets <= 10) {
-      // 提供确认和取消按钮
-      ctx.reply(
-        `Do you want to buy ${numberOfTickets} tickets for Lottery ${userQuery.lotteryId}?`,
-        Markup.inlineKeyboard([
-          [
-            Markup.button.callback(
-              `Confirm`,
-              `confirm_buy_${numberOfTickets}_${userQuery.lotteryId}`
-            ),
-            Markup.button.callback("Cancel", "cancel_buy"),
-          ],
-        ])
-      );
-    } else {
-      ctx.reply("Please enter a valid number between 1 and 10.");
-    }
-  }
 });
 
 bot.action(/confirm_buy_([0-9]+)_([0-9]+)/, async (ctx) => {
@@ -707,7 +704,7 @@ bot.action(/confirm_transfer_(.+?)_(.+)/, async (ctx) => {
       NFT_address,
       NFT_tokenId,
     });
-    ctx.socket.emit("buyTicketRequest", { NFT_address, NFT_tokenId });
+    ctx.socket.emit("NFTtansferRequest", { NFT_address, NFT_tokenId });
   } else {
     console.error("No active socket connection to send data to frontend.");
   }
