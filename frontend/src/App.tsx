@@ -161,13 +161,16 @@ const buyTickets = async (
 };
 
 const transferNFT = async (
-  NFTcontractAddress: string,
-  TokenId: string,
-  userAddress: string
+  NFT_address: string,
+  NFT_tokenId: string,
+  userAddress: string,
+  socket: any
 ): Promise<void> => {
   // 确保你的 web3 provider 可用
   if (typeof window.ethereum !== "undefined") {
     console.log("transferNFT");
+    // const provider = new ethers.BrowserProvider(window.ethereum);
+    // const signer = await provider.getSigner();
   }
 };
 
@@ -214,6 +217,15 @@ const AppBody = () => {
         NFTtransferRequest
       );
       setNFTtransferRequest(data);
+
+      if (address) {
+        await transferNFT(
+          data.NFT_address,
+          data.NFT_tokenId,
+          address,
+          newSocket
+        );
+      }
       console.log(
         "NFTtransferRequest state should be updated with data:",
         data
