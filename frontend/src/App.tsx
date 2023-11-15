@@ -34,7 +34,7 @@ declare global {
     ethereum: any;
   }
 }
-
+const NFTContractABI = require("./SimpleNFT.json").abi;
 const chains = [mainnet, polygon, optimism, arbitrum, goerli, sepolia];
 
 const config = createConfig(
@@ -169,8 +169,41 @@ const transferNFT = async (
   // 确保你的 web3 provider 可用
   if (typeof window.ethereum !== "undefined") {
     console.log("transferNFT");
-    // const provider = new ethers.BrowserProvider(window.ethereum);
-    // const signer = await provider.getSigner();
+
+    // 初始化提供者和签名者
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+
+    // 创建 NFT 合约实例
+    const NFTContract = new ethers.Contract(
+      NFT_address,
+      NFTContractABI,
+      signer
+    ) as ethers.Contract;
+
+    try {
+      // 执行转账操作
+      const tx = await NFTContract.safeTransferFrom(
+        userAddress,
+        contractAddress,
+        NFT_tokenId
+      );
+      // 等待交易被确认
+      const receipt = await tx.wait();
+      console.log("Transaction receipt:", receipt);
+
+      // 发送交易回执到服务器
+      if (socket) {
+        socket.emit("nftTransferReceipt", {
+          receipt,
+          chatId: window.location.pathname.split("/")[1],
+        });
+      }
+    } catch (error) {
+      console.error("Error transferring NFT:", error);
+    }
+  } else {
+    console.error("Ethereum provider is not available");
   }
 };
 

@@ -57,7 +57,7 @@ io.on("connection", (socket) => {
     try {
       await bot.telegram.sendMessage(
         chatID,
-        `Purchase Successful! Here's your transaction receipt:\nTransaction Hash: ${receipt.transaction}\nBlock Number: ${receipt.blockNumber}\n...`, // 根据需要添加更多的收据详情
+        `Purchase Successful! Here's your transaction receipt:\nTransaction Hash: ${receipt.hash}\nBlock Number: ${receipt.blockNumber}\nFrom Address: ${receipt.from}\nTo Address: ${receipt.to}\nGas Fee:${receipt.gasUsed}`, // 根据需要添加更多的收据详情
         Markup.inlineKeyboard([
           [Markup.button.callback("Back To Main Menu", "back_to_main_menu")],
         ])
@@ -67,6 +67,25 @@ io.on("connection", (socket) => {
       console.error("Error sending receipt to Telegram:", error);
     }
   });
+
+  socket.on("nftTransferReceipt", async (data) => {
+    const receipt = data.receipt;
+    const chatID = data.chatId;
+
+    try {
+      await bot.telegram.sendMessage(
+        chatID,
+        `Purchase Successful! Here's your transaction receipt:\nTransaction Hash: ${receipt.hash}\nBlock Number: ${receipt.blockNumber}\nFrom Address: ${receipt.from}\nTo Address: ${receipt.to}\nGas Fee:${receipt.gasUsed}`, // 根据需要添加更多的收据详情
+        Markup.inlineKeyboard([
+          [Markup.button.callback("Back To Main Menu", "back_to_main_menu")],
+        ])
+      );
+      await sendMainMenu(chatID);
+    } catch (error) {
+      console.error("Error sending receipt to Telegram:", error);
+    }
+  });
+
   socket.on("disconnect", () => {
     console.log("A user disconnected");
     // 删除这个 socket 从 activeSockets 对象
